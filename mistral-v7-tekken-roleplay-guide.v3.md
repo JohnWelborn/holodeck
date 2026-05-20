@@ -462,7 +462,9 @@ on each player turn:
      d. if request fails → show error, do NOT modify shared_transcript, retry or abort
      e. extract reply = response.choices[0].message.content
      f. check finish_reason — if "length", decide whether to retry or continue
-     g. append { speaker: characterName, text: reply, presentCharacters: [...] }
+     g. strip any content after the first non-target character name prefix
+        (e.g. "Drek:" appearing in Aria's reply — truncate there before saving)
+     h. append { speaker: characterName, text: reply, presentCharacters: [...] }
         to shared_transcript
      h. display reply to player
   4. repeat
@@ -560,7 +562,8 @@ Trimming strategy:
   - Remove the oldest transcript entries first
   - Never trim the last 4–6 turns (recent context matters most)
   - If trimmed turns contained information the character witnessed, update their
-    "What they know" field to summarize what was lost
+    "What they know" field to summarize what was lost — in automated
+    sessions this summarization step can be handled by a separate LLM call
 
 Rough token estimates:
   Fixed overhead per character per call:   300–500 tokens (character sheet,
@@ -581,7 +584,7 @@ Rough token estimates:
                              llama.cpp extension, may not pass through all Jan versions)
   frequency_penalty: 0.1    (mild repetition reduction; OpenAI-compatible field)
   presence_penalty:  0.1    (discourages returning to already-used topics/phrases)
-  stream:            true   (better UX — player sees reply appearing in real time)
+  stream:            false  (simpler to implement; switch to true for real-time token display)
 
 **`top_p` vs `min_p`:** These can be used together. `top_p` limits the cumulative
 probability mass of the candidate token pool. `min_p` removes any token whose
