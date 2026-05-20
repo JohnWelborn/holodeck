@@ -1,8 +1,10 @@
 # Mistral V7 Tekken — AI Character Roleplay API Guide
 
-A practical implementation guide for sending and receiving multi-character roleplay
-messages using the OpenAI-compatible Jan local API server with a llama.cpp + Mistral
-V7 Tekken backend.
+A practical implementation guide for per-character roleplay using the OpenAI-compatible Jan
+local API server with a llama.cpp + Mistral V7 Tekken backend.
+
+Each AI character that speaks gets its own independent API call with its own filtered context.
+This guide covers the V7 Tekken format requirements and the per-character prompt architecture.
 
 ---
 
@@ -163,109 +165,170 @@ incorrect. Your options are:
 
 ## Core Concepts for Roleplay
 
-### The Three-Role System
+### Per-Character Calls
 
-  system    — Your world bible: characters, setting, narrator instructions.
-              In V7 Tekken, can also be injected mid-conversation for scene changes
-              (requires verified template detection — see above).
-  user      — The player's actions, dialogue, and in-scene event notes.
-  assistant — The narrator's response: NPC dialogue, descriptions, story beats.
+Each AI character that speaks on a given turn gets its own independent API call with its
+own system prompt and context. Characters are never batched into a single call. Each call
+is a two-message payload: a short system prompt (the author frame) and a user message
+containing all scene context assembled fresh for that character.
 
-### Character Name Prefixing
+### The Author Frame
 
-Since the API only has one assistant role, all NPC characters are written by
-the narrator (the assistant) using name prefixes in the content. This is the
-standard approach and keeps things compatible with any message parsing your
-app needs to do.
+The system prompt positions the model as an author writing a specific character, not as
+a narrator writing all characters. This reduces character drift in long sessions and keeps
+the model from bleeding into writing other characters' reactions.
 
-Format:
-  CharacterName: [dialogue or action]
+```
+You are the author of an ongoing collaborative fiction.
+You are currently writing the role of [CHARACTER NAME].
+Write only [CHARACTER NAME]'s contributions — their actions, dialogue, and reactions.
+Never write for any other character.
+```
 
-Example in an assistant message:
-  "Drek: You got coin, or are you just here for the warmth?\nAria: [doesn't look up from her map]"
+Keep the system prompt under ~60 tokens. All scene context goes in the user message.
 
-The user can similarly prefix their own character name:
-  "Kael: I'm looking for the south road."
+### Character Knowledge Filtering
 
-### Scene Change System Messages
+Each call's user message contains only what that character has witnessed. A character who
+left the room before a secret was revealed does not see that exchange in their transcript.
+A dedicated "What they know" field states their knowledge state at this exact moment in
+the scene — not backstory, but what they've seen, heard, or calculated since the scene
+began. Do not assume the model will infer this from the transcript alone; write it out
+explicitly.
 
-For significant location or situation changes, insert a new system role message
-at the appropriate point in the messages array. Keep it short and directive —
-it supplements the original system message, it does not replace it.
+### Subjective Cast List
+
+Other participants are described from the target character's point of view — what they
+think and feel about each person, not objective bios. Two characters' entries for the same
+person will differ. This produces more naturalistic inter-character behavior.
+
+### Sequential Chaining
+
+When multiple characters respond in one turn, call them one at a time. Append the first
+character's reply to the shared transcript, then call the next character with the now-updated
+transcript. Each character can react to what the previous character just said. Parallel calls
+are faster but produce characters talking past each other.
 
 ---
 
-## Complete Example: Ongoing Roleplay JSON
+## Per-Character Prompt Structure
 
-This shows a full multi-turn conversation with two characters, a player character,
-and a mid-conversation scene change.
+Each API call for a character is composed of exactly two messages: a system prompt and a
+user message. All substantive context goes in the user message, assembled fresh on every call.
+
+### System Prompt
+
+Short. Establishes the author frame and the single hard rule. Under ~60 tokens.
+
+```
+You are the author of an ongoing collaborative fiction.
+You are currently writing the role of [CHARACTER NAME].
+Write only [CHARACTER NAME]'s contributions — actions, dialogue, and reactions.
+Never write for any other character.
+```
+
+### User Message
+
+Assembled fresh on every call. Sections in this order:
+
+```
+## Environment
+[Name] — [2–4 sentence description. Physical space, atmosphere,
+sensory detail. Enough to render the setting without improvising.]
+
+## Scenario
+[2–4 sentences. What is happening, what the stakes are, what needs
+to happen next in the world of the scene.]
+
+## Your Character
+**Name:** [Full name]
+**Role:** [e.g. Elven ranger, over two centuries old]
+**Personality:** [3–5 sentences. Disposition, values, how they
+behave under pressure, what drives them.]
+**Speech:** [How they talk. Register, habits, things they'd never say.]
+**What they know about this scene:** [Knowledge state at this moment —
+what they've witnessed, heard, or calculated since the scene began.
+Omit anything they were not present for.]
+
+## The Other Participants
+**[Name]** — [1–2 sentences from this character's POV. What they
+think of this person, trust level, relevant history. Not an
+objective bio.]
+**[Name]** — [Same.]
+
+## Scene Transcript
+[Speaker Name]: [contribution — dialogue and action beats]
+
+[Speaker Name]: [contribution]
+
+---
+Write [CHARACTER NAME]'s next response. Narrative prose — action
+and dialogue. Stop when their contribution is complete.
+```
+
+The closing directive "Stop when their contribution is complete" is important — without it,
+models tend to over-generate or write another character's reaction.
+
+---
+
+## Complete Example: Per-Character API Call
+
+This shows the full JSON payload for a single per-character call. The scene is three turns
+into a tavern scenario. Aria is being called to respond after Kael questioned Drek about a
+missing girl.
+
+Aria was present for all turns so her transcript is unfiltered here. In a session where a
+character had stepped outside, those turns would be omitted from their transcript and their
+"What they know" field would not mention anything from that exchange.
 
 ```json
 {
   "model": "mistral-v7-tekken",
   "temperature": 0.85,
-  "max_tokens": 512,
+  "max_tokens": 400,
   "stream": false,
   "messages": [
-
     {
       "role": "system",
-      "content": "## Role\nYou are the narrator of an interactive fantasy roleplay. Write all NPC responses in third-person prose, giving each character a distinct voice. Be descriptive but concise. Never break the fourth wall or refer to yourself as an AI.\n\n## Player Character\nName: Kael\nRace: Human\nOccupation: Sellsword, former city guard\nPersonality: Blunt, distrustful of magic, loyal once earned\nMotivation: Searching for his missing sister, last seen near Ironhold\n\n## NPC Characters\nAria — An elven ranger, over two centuries old. Speaks in short, measured sentences. Rarely volunteers information. Distrusts Drek but won't say why. Always aware of exits.\nDrek — Dwarf tavern owner and black-market contact. Jovial surface, calculating underneath. Speaks in clipped sentences. Notices everything.\n\n## Character Relationships\n- Aria and Drek share a tense history. Do not elaborate on it unless Kael directly asks.\n- Both have heard rumours about missing people near Ironhold but have not mentioned it unprompted.\n\n## Starting Scene\nLocation: The Rusty Flagon tavern, Ironhold. A rough mining town on the edge of the kingdom.\nTime: Evening. Heavy rain outside.\nAtmosphere: Low candlelight, half-empty tavern, the smell of woodsmoke and wet boots."
+      "content": "You are the author of an ongoing collaborative fiction.\nYou are currently writing the role of Aria.\nWrite only Aria's contributions — her actions, dialogue, and reactions.\nNever write for any other character."
     },
-
     {
       "role": "user",
-      "content": "Kael: [enters the tavern, shaking rain from his cloak, and drops his coin purse on the bar] Give me something hot and tell me if there's work around here."
-    },
-
-    {
-      "role": "assistant",
-      "content": "Drek: [eyes the purse without moving his head] Hot food's a copper. Work depends on what kind you're after. [slides a bowl of stew across without being asked]\nAria: [seated alone near the back wall, does not look up from the map spread across her table]"
-    },
-
-    {
-      "role": "user",
-      "content": "Kael: The kind that pays. I'm looking for someone too — a girl, early twenties, dark hair. Passed through here maybe two weeks ago. [sits at the bar and starts eating]"
-    },
-
-    {
-      "role": "assistant",
-      "content": "Drek: [pauses his glass-polishing for exactly one second] Can't say I recall every face that comes through. Town's been busier than usual. [resumes polishing]\nAria: [from across the room, without looking up] Two weeks ago the south gate guard went missing on the same night. Nobody talks about it."
-    },
-
-    {
-      "role": "user",
-      "content": "Kael: [turns to look at the elf] You got a name? And why are you telling me this?"
-    },
-
-    {
-      "role": "assistant",
-      "content": "Aria: [folds the map deliberately before answering] Aria. I'm telling you because you have the look of someone who'll go looking regardless. Better you go knowing something than nothing. [finally meets his eyes] The south road has been wrong since that night. I don't mean dangerous. I mean wrong."
-    },
-
-    {
-      "role": "user",
-      "content": "Kael: [stands, leaves coin on the bar] Then let's go look at it now while there's still— [the tavern door bursts open]"
-    },
-
-    {
-      "role": "system",
-      "content": "[SCENE CHANGE] A wounded city guard has stumbled into the tavern. He is bleeding from a deep wound on his side and collapses near the entrance. He is clutching a piece of torn cloth — the same pattern as the missing girl's description. The tavern goes completely silent. Rain pours through the open door."
-    },
-
-    {
-      "role": "assistant",
-      "content": "Drek: [drops the glass — it shatters] Everyone back. [vaults the bar with surprising speed for a dwarf]\nAria: [already moving, hand on her bow, scanning the open door before anyone else thinks to] Door. Now. [to Kael] Is that her cloth?"
-    },
-
-    {
-      "role": "user",
-      "content": "Kael: [kneels beside the guard] Stay with me. Who did this to you? Where did you come from?"
+      "content": "## Environment\nThe Rusty Flagon — A rough tavern in Ironhold, a mining town on the edge of the kingdom. Low candlelight, half-empty room, smell of woodsmoke and wet boots. Heavy rain outside.\n\n## Scenario\nA stranger arrived asking about a missing girl and looking for work. He has been speaking with the tavern owner and his questions are edging toward something Aria knows about — a disappearance two weeks ago that nobody in town talks about.\n\n## Your Character\n**Name:** Aria\n**Role:** Elven ranger, over two centuries old\n**Personality:** Watchful and economical with words. Always positioned near exits. Carries old knowledge she rarely shares unprompted. Acts decisively when others are still processing.\n**Speech:** Short, measured sentences. Rarely volunteers information. Asks pointed questions when she does speak. Never flustered.\n**What she knows about this scene:** She arrived early and took a table near the back wall with sightlines to both the door and the bar. She noticed the stranger enter — he moves like a soldier or former guard, not a thief. She has been watching Drek deflect the stranger's questions, which she expected. She knows that two weeks ago a south gate guard went missing on the same night as the girl the stranger is describing. She has not told anyone in this tavern.\n\n## The Other Participants\n**Drek** — Tavern owner she has known for years. Jovial on the surface, calculating underneath. He always knows more than he lets on and she has learned not to expect straight answers from him. She is watching him deflect the stranger right now.\n**Kael** — The stranger who just walked in. She does not know him. Former military bearing. He is asking about a missing girl with the urgency of someone who knows her personally. Could be dangerous or useful — too early to say.\n\n## Scene Transcript\nKael: [enters the tavern, shaking rain from his cloak, and drops his coin purse on the bar] Give me something hot and tell me if there's work around here.\n\nDrek: [eyes the purse without moving his head] Hot food's a copper. Work depends on what kind you're after. [slides a bowl of stew across without being asked]\nAria: [seated alone near the back wall, does not look up from the map spread across her table]\n\nKael: The kind that pays. I'm looking for someone too — a girl, early twenties, dark hair. Passed through here maybe two weeks ago. [sits at the bar and starts eating]\n\nDrek: [pauses his glass-polishing for exactly one second] Can't say I recall every face that comes through. Town's been busier than usual. [resumes polishing]\n\n---\nWrite Aria's next response. Narrative prose — action and dialogue. Stop when her contribution is complete."
     }
-
   ]
 }
 ```
+
+The two-message structure maps to V7 Tekken as:
+
+```
+<s>[SYSTEM_PROMPT]author frame[/SYSTEM_PROMPT][INST]full scene context + transcript[/INST]
+```
+
+The model generates Aria's contribution only. Her response is appended to the shared
+transcript client-side. If Drek also needs to respond this turn, a separate call is built
+for him with his own character sheet and his own perspective on the scene.
+
+---
+
+## Who Responds
+
+On each player turn, one character responds (or multiple, called sequentially).
+
+**User-selected** — The current mode. The user picks which character responds. One API call
+is made for that character only.
+
+**Spotlight** — A UI mechanism (e.g. a target icon per participant) that pins the next
+response to a specific character.
+
+**@mention** — Parse the user's message for `@CharacterName`. Call only the mentioned
+character. Include the `@mention` in the transcript for all characters so they know it
+occurred.
+
+**Automatic (future)** — A separate lightweight LLM call determines which character responds
+and in what order. Heuristics to consider: who was directly addressed, who has the highest
+narrative stake, who has been silent longest.
 
 ---
 
@@ -275,10 +338,10 @@ and a mid-conversation scene change.
 |-------------------|---------|-------------------------------------------------------------------------|
 | model             | string  | Model ID as registered in Jan                                           |
 | temperature       | float   | 0.7–0.9 recommended for roleplay. Higher = more creative.               |
-| max_tokens        | integer | Max length of each narrator reply. 300–600 is typical.                  |
+| max_tokens        | integer | Max length of each reply. 300–600 is typical.                           |
 | stream            | boolean | true = tokens arrive as they generate. false = wait for full reply.     |
 | stream_options    | object  | `{"include_usage": true}` — request token usage in streaming mode.      |
-| messages          | array   | Full conversation history sent every request (stateless API).           |
+| messages          | array   | Two messages per call: system (author frame) + user (scene context).    |
 | frequency_penalty | float   | 0.0–0.5 range. Reduces repetition scaled by how often a token appears.  |
 | presence_penalty  | float   | 0.0–0.5 range. Penalises any token that has appeared at all, once.      |
 
@@ -319,15 +382,15 @@ each) is a reasonable starting point.
       "index": 0,
       "message": {
         "role": "assistant",
-        "content": "Drek: [drops the glass...]\nAria: [already moving...]"
+        "content": "Aria: [from across the room, without looking up] Two weeks ago the south gate guard went missing on the same night. Nobody talks about it."
       },
       "finish_reason": "stop"
     }
   ],
   "usage": {
     "prompt_tokens": 412,
-    "completion_tokens": 87,
-    "total_tokens": 499
+    "completion_tokens": 38,
+    "total_tokens": 450
   }
 }
 ```
@@ -352,7 +415,7 @@ When `stream: true`, the endpoint returns Server-Sent Events instead of a single
 JSON object. Each chunk arrives as:
 
 ```
-data: {"id":"chatcmpl-abc123","object":"chat.completion.chunk","choices":[{"delta":{"content":"Drek"},"finish_reason":null}]}
+data: {"id":"chatcmpl-abc123","object":"chat.completion.chunk","choices":[{"delta":{"content":"Aria"},"finish_reason":null}]}
 data: {"id":"chatcmpl-abc123","object":"chat.completion.chunk","choices":[{"delta":{"content":": "},"finish_reason":null}]}
 ...
 data: {"id":"chatcmpl-abc123","object":"chat.completion.chunk","choices":[{"delta":{},"finish_reason":"stop"}]}
@@ -371,37 +434,46 @@ tracking if it is not present in your chunks.
 
 ---
 
-## The Stateless Loop (Implementation Pattern)
+## The Per-Character Call Loop
 
-The API has no memory. You manage the full conversation history on your side.
-Every request must include all previous messages.
-
-**Only append to history after a successful response.** If the API call fails,
-the history must remain unchanged — appending a failed turn corrupts the
-conversation and the history grows out of sync with the model's view of events.
-
-Pseudocode:
+The API has no memory. You manage the shared transcript on your side. Each call is a fresh
+two-message payload — there is no growing history array to append to. Only update the shared
+transcript after a successful response.
 
 ```
-messages = [ initial system message ]
+shared_transcript = []
 
 on each player turn:
-  1. build next_user = { role: "user", content: "Kael: ..." }
-  2. POST [...messages, next_user] to /v1/chat/completions
-  3. if request fails → show error, do NOT modify messages, retry or abort
-  4. extract reply = response.choices[0].message.content
-  5. check finish_reason — if "length", decide whether to retry or continue
-  6. append next_user to messages
-  7. append { role: "assistant", content: reply } to messages
-  8. display reply to player
-  9. repeat
-
-on scene change:
-  - build scene_msg = { role: "system", content: "[SCENE CHANGE] ..." }
-  - insert scene_msg into messages at the correct chronological position
-    (usually just before step 1 of the next player turn)
-  - continue the loop as normal
+  1. append player message to shared_transcript:
+       { speaker: "Kael", text: "...", presentCharacters: ["aria", "drek"] }
+  2. determine which character responds (user picks, spotlight, or @mention)
+  3. for each responding character (in order, if more than one):
+     a. filter shared_transcript to turns this character was present for
+     b. build the two-message payload:
+          systemPrompt: author frame (~60 tokens)
+          userMessage:  environment + scenario + character sheet
+                        (with "what they know") + cast (subjective)
+                        + filtered transcript + closing directive
+     c. POST [{ role: "system", content: systemPrompt },
+              { role: "user",   content: userMessage }]
+        to /v1/chat/completions
+     d. if request fails → show error, do NOT modify shared_transcript, retry or abort
+     e. extract reply = response.choices[0].message.content
+     f. check finish_reason — if "length", decide whether to retry or continue
+     g. append { speaker: characterName, text: reply, presentCharacters: [...] }
+        to shared_transcript
+     h. display reply to player
+  4. repeat
 ```
+
+**Sequential chaining:** If two characters both respond on a turn, step 3a for the second
+character uses the shared_transcript that already includes the first character's reply
+(appended in step 3g). The second character can react to what the first just said.
+
+**Transcript filtering:** Tag each transcript entry with which characters were present when
+it was added. When building a call for a given character, include only entries where that
+character appears in `presentCharacters`. Update the "What they know" field accordingly —
+omit anything from turns they missed.
 
 ---
 
@@ -431,42 +503,6 @@ curl http://localhost:1337/v1/chat/completions \
     ]
   }'
 ```
-
----
-
-## System Message Strategy
-
-### Original system message (position 0)
-Put everything stable here: narrator instructions, all character profiles,
-relationships, starting location, and tone. This is your world bible.
-
-Suggested structure:
-
-  ## Role
-  Narrator instructions and style guidance.
-
-  ## Player Character
-  Name, background, personality, current goal.
-
-  ## NPC Characters
-  One entry per character: name, personality, speech style, secrets.
-
-  ## Character Relationships
-  How characters relate to each other and what they know.
-
-  ## Starting Scene
-  Location, time of day, atmosphere, current tension.
-
-### Mid-conversation system messages (scene changes)
-Keep these short and specific. They add to the world bible; they do not
-replace it. The model still has the original system message earlier in context.
-
-Good scene change message:
-  "[SCENE CHANGE] The party has left the tavern and is on the south road.
-  Midnight. Forest is unnaturally silent. Aria is visibly on edge."
-
-Bad scene change message (too vague):
-  "The scene changed."
 
 ---
 
@@ -501,29 +537,33 @@ Context window size is a property of the specific model, not of the V7 Tekken
 template format. Check the model card for your GGUF's trained context length.
 Common values for models using the V7 Tekken tokenizer (such as Mistral Small 24B
 2501) are 32k tokens, but your usable budget in practice will be lower if you are
-running with a reduced KV cache size due to VRAM constraints — Jan will typically
-show the loaded context size in the model info panel.
+running with a reduced KV cache size due to VRAM constraints.
 
 **Important:** The context size Jan actually loads may be smaller than the model's
 maximum if your hardware limits the KV cache. Always verify the loaded context size
 in Jan's model info panel rather than assuming the model's maximum is in use. Your
 token budget for trimming should be based on the loaded size, not the model maximum.
 
-Track `usage.total_tokens` in each non-streaming response. As history grows you
-will need to trim old turns to avoid hitting the limit and degrading response quality.
+Each call is two messages (system + user), not a growing history array. Context grows
+with the transcript length, not with the number of API calls made.
+
+Track `usage.total_tokens` in each non-streaming response. As the session grows you
+will need to trim old transcript entries from the user message to stay within budget.
 
 Trimming strategy:
-  - Always keep the original system message (position 0)
-  - Always keep any active scene-change system messages from recent turns
-  - Remove the oldest user/assistant pairs first
+  - Always keep the fixed overhead: environment, scenario, character sheet, cast
+  - Remove the oldest transcript entries first
   - Never trim the last 4–6 turns (recent context matters most)
+  - If trimmed turns contained information the character witnessed, update their
+    "What they know" field to summarize what was lost
 
 Rough token estimates:
-  A full system world-bible prompt:    600–900 tokens (detailed character sheets
-                                       and scene descriptions fill this quickly)
-  Each user/assistant turn pair:       100–300 tokens
-  Safe working budget (32k context):   ~60–80 turns before trimming needed
-                                       (lower end if your world-bible is large)
+  Fixed overhead per character per call:   300–500 tokens (character sheet,
+                                           environment, cast, closing directive)
+  Each transcript turn:                    50–200 tokens
+  Safe working budget (32k context):       ~60–120 transcript turns before
+                                           trimming needed (lower if character
+                                           sheets are large)
 
 ---
 
@@ -559,11 +599,17 @@ endpoint depends on your Jan version.
       before building the full roleplay loop
   [ ] If template detection fails, use the Jinja override string from the
       "Verifying Template Detection" section
-  [ ] Build the initial messages array with your world-bible system message
-  [ ] On each turn: build user message → POST → on success: append user + append
-      assistant reply → on failure: do not append, handle error
+  [ ] Build character data with personality, speech, and perspectives entries
+      (each character's subjective views of every other character)
+  [ ] Write a buildPrompt(targetCharacterId, sharedTranscript, sceneState) function
+      that assembles the two-message payload (author-frame system prompt +
+      full context user message)
+  [ ] Implement transcript filtering — tag each entry with which characters were
+      present; filter per character when building their call
+  [ ] On each turn: user picks (or @mention / spotlight selects) which character responds
+  [ ] For sequential responses: append each reply to shared_transcript before calling next
+  [ ] Each call is exactly two messages: short author-frame system + full context user
   [ ] Handle finish_reason "length" — retry with more tokens or send a continuation
-  [ ] On scene change: insert a system message before the next user turn
-  [ ] Track total_tokens in non-streaming responses (or use stream_options for
-      streaming) and trim old history when approaching your model's context limit
+  [ ] Track total_tokens in non-streaming responses (or use stream_options for streaming)
+      and trim old transcript entries when approaching your model's loaded context limit
   [ ] Use consistent "Name: [action] dialogue" prefixing throughout
