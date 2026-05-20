@@ -403,11 +403,13 @@ Check finish_reason:
   "length" — hit max_tokens limit; reply is cut off mid-generation
 
 When you receive `"length"`, you have two options:
-1. Increase `max_tokens` and resend the request with the same history (the
-   incomplete reply was not appended, so history is still clean).
-2. Append the incomplete reply to history anyway, then send a short continuation
-   prompt such as `[continue]` as the next user message. The model will pick up
-   mid-sentence. This preserves turn parity but produces a slightly seamed reply.
+1. Rebuild and resend the same two-message payload with a higher max_tokens value.
+   The incomplete reply was not appended to shared_transcript, so nothing is corrupted.
+2. Send a one-off four-message continuation call: the standard two messages (system +
+   user with full scene context), followed by the incomplete reply as an `assistant`
+   turn, then `[continue]` as a second `user` turn. The model resumes mid-sentence.
+   Concatenate the partial and continued text before appending to shared_transcript.
+   Return to the standard two-message format for the next regular turn.
 
 ### Streaming response shape
 
@@ -471,9 +473,12 @@ character uses the shared_transcript that already includes the first character's
 (appended in step 3g). The second character can react to what the first just said.
 
 **Transcript filtering:** Tag each transcript entry with which characters were present when
-it was added. When building a call for a given character, include only entries where that
-character appears in `presentCharacters`. Update the "What they know" field accordingly —
-omit anything from turns they missed.
+it was added. `presentCharacters` is not who spoke — it is who was in the scene. If Aria,
+Drek, and Kael are all in the tavern, every entry added during that time carries all three
+IDs, even entries where only one of them speaks. Only update the list when a character
+physically enters or leaves the location. When building a call for a given character,
+include only entries where that character appears in `presentCharacters`. Update the "What
+they know" field accordingly — omit anything from turns they missed.
 
 ---
 
