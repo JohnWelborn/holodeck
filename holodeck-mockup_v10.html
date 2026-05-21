@@ -54,7 +54,7 @@
 
     /* ── Settings panel ── */
     .settings-panel {
-      position: absolute; top: 50px; right: 12px; width: 256px;
+      position: absolute; top: 50px; right: 12px; width: 288px;
       background: var(--color-background-secondary);
       border: 0.5px solid var(--color-border-secondary);
       border-radius: var(--border-radius-lg);
@@ -62,6 +62,7 @@
       box-shadow: 0 8px 32px rgba(0,0,0,0.5);
       display: none;
     }
+    .api-status { font-size: 11px; line-height: 1.45; margin-top: 10px; min-height: 16px; word-break: break-word; white-space: pre-wrap; }
     .settings-panel.open { display: block; }
     .setting-label { display: block; font-size: 10px; font-weight: 500; color: var(--color-text-secondary); letter-spacing: 0.5px; text-transform: uppercase; margin-bottom: 5px; }
     .setting-input {
@@ -72,7 +73,6 @@
       font-size: 12px; font-family: var(--font-sans); outline: none;
     }
     .setting-input:focus { border-color: var(--color-border-primary); }
-    .api-status { font-size: 11px; font-style: italic; margin-top: 8px; min-height: 16px; }
 
     /* ── Thinking animation ── */
     @keyframes blink { 0%,100%{opacity:0.15} 50%{opacity:0.8} }
@@ -321,12 +321,17 @@
     </div>
     <div style="margin-bottom:10px;">
       <label class="setting-label" for="api-url">Base URL</label>
-      <input class="setting-input" id="api-url" type="text" placeholder="http://localhost:11434/v1" oninput="updateApiSettings()">
+      <input class="setting-input" id="api-url" type="text" placeholder="http://localhost:1337/v1" oninput="updateApiSettings()">
     </div>
-    <div>
+    <div style="margin-bottom:10px;">
       <label class="setting-label" for="api-model">Model</label>
-      <input class="setting-input" id="api-model" type="text" placeholder="llama3" oninput="updateApiSettings()">
+      <input class="setting-input" id="api-model" type="text" placeholder="mistral-v7-tekken" oninput="updateApiSettings()">
     </div>
+    <div style="margin-bottom:10px;">
+      <label class="setting-label" for="api-token">API Token</label>
+      <input class="setting-input" id="api-token" type="password" placeholder="sk-…" autocomplete="off" oninput="updateApiSettings()">
+    </div>
+    <button id="test-connection-btn" onclick="testConnection()" class="btn-primary" style="width:100%;padding:6px 12px;font-size:12px;margin-top:2px;">Test Connection</button>
     <div class="api-status" id="api-status" style="color:var(--color-text-tertiary);"></div>
   </div>
 
@@ -479,12 +484,14 @@ function genId(prefix) { return prefix + '-' + Date.now(); }
 // ═══════════════════════════════════════════════════════════════════
 //  API SETTINGS
 // ═══════════════════════════════════════════════════════════════════
-var apiSettings = { baseUrl: 'http://localhost:11434/v1', model: 'llama3' };
+var apiSettings = { baseUrl: 'http://localhost:1337/v1', model: 'mistral-v7-tekken', token: '' };
 document.getElementById('api-url').value   = apiSettings.baseUrl;
 document.getElementById('api-model').value = apiSettings.model;
+document.getElementById('api-token').value = apiSettings.token;
 function updateApiSettings() {
-  apiSettings.baseUrl = document.getElementById('api-url').value.trim() || 'http://localhost:11434/v1';
-  apiSettings.model   = document.getElementById('api-model').value.trim() || 'llama3';
+  apiSettings.baseUrl = document.getElementById('api-url').value.trim() || 'http://localhost:1337/v1';
+  apiSettings.model   = document.getElementById('api-model').value.trim() || 'mistral-v7-tekken';
+  apiSettings.token   = document.getElementById('api-token').value.trim();
 }
 var settingsOpen = false;
 function toggleSettings() {
@@ -1359,15 +1366,37 @@ function buildPrompt(targetId) {
     return s.name + ' — ' + s.description;
   }).join('\n\n');
 
+  // Current state — target character's active traits
+  var stateBlock = '';
+  if (target.traits && target.traits.length > 0) {
+    var stateLines = target.traits.map(function(t){
+      var name = (typeof t === 'object') ? t.name : t;
+      var desc = (typeof t === 'object' && t.description) ? t.description : '';
+      return desc ? ('- ' + name + ' — ' + desc) : ('- ' + name);
+    });
+    stateBlock = '**Current state:**\n' + stateLines.join('\n');
+  }
+
+  // Cast lines — POV + observable traits
   var castLines = Object.keys(programState.participants)
     .filter(function(id){ return id !== targetId; })
     .map(function(id){
       var p = programState.participants[id];
       var perspective = (target.perspectives && target.perspectives[id]) || '';
-      return '**' + p.fullName + '** (' + p.role + ') — ' + perspective;
+      var line = '**' + p.fullName + '** (' + p.role + ') — ' + perspective;
+      if (p.traits && p.traits.length > 0) {
+        var names = p.traits.map(function(t){ return (typeof t === 'object') ? t.name : t; });
+        line += ' *Currently: ' + names.join(', ') + '.*';
+      }
+      return line;
     });
 
-  var transcriptText = programState.transcript.map(function(msg){
+  // Transcript — filter by which entries the target was present for
+  var filteredTranscript = programState.transcript.filter(function(msg){
+    if (!msg.presentCharacters) return true;
+    return msg.presentCharacters.indexOf(targetId) !== -1;
+  });
+  var transcriptText = filteredTranscript.map(function(msg){
     return msg.speakerName + ': ' + msg.text;
   }).join('\n\n');
 
@@ -1378,15 +1407,20 @@ function buildPrompt(targetId) {
     'Never write for any other character.'
   ].join('\n');
 
-  var userMessage = [
-    '## Environment', envText, '',
-    '## Scenario', scenText, '',
+  var characterSheet = [
     '## Your Character',
     '**Name:** ' + target.fullName,
     '**Role:** ' + target.role,
     '**Personality:** ' + target.personality,
     '**Speech:** ' + target.speech,
-    '**What they know about this scene:** ' + target.knowledge, '',
+    '**What they know about this scene:** ' + target.knowledge
+  ];
+  if (stateBlock) characterSheet.push(stateBlock);
+
+  var userMessage = [
+    '## Environment', envText, '',
+    '## Scenario', scenText, '',
+    characterSheet.join('\n'), '',
     '## The Other Participants', castLines.join('\n'), '',
     '## Scene Transcript', transcriptText, '',
     '---',
@@ -1488,6 +1522,77 @@ function createMsgRow(participantId, text, isUserMsg) {
 }
 
 // ═══════════════════════════════════════════════════════════════════
+//  API HELPERS
+// ═══════════════════════════════════════════════════════════════════
+function buildHeaders() {
+  var h = { 'Content-Type': 'application/json' };
+  if (apiSettings.token) h['Authorization'] = 'Bearer ' + apiSettings.token;
+  return h;
+}
+function redactHeaders(h) {
+  if (!h.Authorization) return h;
+  var t = apiSettings.token || '';
+  var tail = t.length > 4 ? t.slice(-4) : t;
+  return Object.assign({}, h, { Authorization: 'Bearer …' + tail });
+}
+function apiEndpoint() {
+  return apiSettings.baseUrl.replace(/\/+$/, '') + '/chat/completions';
+}
+
+// ═══════════════════════════════════════════════════════════════════
+//  TEST CONNECTION
+// ═══════════════════════════════════════════════════════════════════
+async function testConnection() {
+  var btn = document.getElementById('test-connection-btn');
+  btn.disabled = true;
+  btn.style.opacity = '0.6';
+  setApiStatus('Testing…', 'var(--color-text-secondary)');
+
+  var url = apiEndpoint();
+  var headers = buildHeaders();
+  var body = {
+    model: apiSettings.model,
+    max_tokens: 10,
+    stream: false,
+    messages: [
+      { role: 'system', content: 'TEMPLATE-CHECK-SYSTEM' },
+      { role: 'user',   content: 'TEMPLATE-CHECK-USER'   }
+    ]
+  };
+
+  console.group('%c[Holodeck] API Test → Connection', 'color:#56c99a;font-weight:bold;');
+  console.log('%cURL', 'color:#888', url);
+  console.log('%cHeaders', 'color:#888', redactHeaders(headers));
+  console.log('%cRequest body', 'color:#888', body);
+
+  try {
+    var res = await fetch(url, { method: 'POST', headers: headers, body: JSON.stringify(body) });
+    var raw = await res.text();
+    var parsed;
+    try { parsed = JSON.parse(raw); } catch (e) { parsed = raw; }
+    console.log('%cResponse', 'color:#888', parsed);
+    if (!res.ok) {
+      var msg = (parsed && parsed.error && (parsed.error.message || parsed.error)) || ('HTTP ' + res.status);
+      setApiStatus('✗ ' + (typeof msg === 'string' ? msg : JSON.stringify(msg)), '#d97070');
+    } else {
+      var reply = parsed && parsed.choices && parsed.choices[0] && parsed.choices[0].message && parsed.choices[0].message.content;
+      if (reply && reply.trim()) {
+        setApiStatus('✓ ' + reply.trim(), 'var(--active-color)');
+      } else {
+        setApiStatus('✓ Connected (empty reply)', 'var(--active-color)');
+      }
+    }
+  } catch (err) {
+    console.error('%cResponse error', 'color:#d97070', err);
+    setApiStatus('✗ ' + err.message, '#d97070');
+  } finally {
+    btn.disabled = false;
+    btn.style.opacity = '';
+    console.groupEnd();
+  }
+}
+
+// ═══════════════════════════════════════════════════════════════════
 //  TRIGGER CHARACTER RESPONSE
 // ═══════════════════════════════════════════════════════════════════
 async function triggerCharacter(targetId) {
@@ -1505,35 +1610,44 @@ async function triggerCharacter(targetId) {
   container.appendChild(msgResult.row);
   container.scrollTop = container.scrollHeight;
 
-  var apiUrl = apiSettings.baseUrl.replace(/\/+$/, '') + '/chat/completions';
+  var url = apiEndpoint();
+  var headers = buildHeaders();
   var requestBody = {
     model: apiSettings.model,
     messages: [
       { role:'system', content:prompt.systemPrompt },
       { role:'user',   content:prompt.userMessage  }
     ],
-    max_tokens: 400, temperature: 0.8, stream: true
+    temperature: 0.85,
+    max_tokens: 400,
+    top_p: 0.95,
+    frequency_penalty: 0.1,
+    presence_penalty: 0.1,
+    stream: true
   };
 
   console.group('%c[Holodeck] API Request → ' + p.displayName, 'color:#56c99a;font-weight:bold;');
-  console.log('%cURL', 'color:#888', apiUrl);
+  console.log('%cURL', 'color:#888', url);
+  console.log('%cHeaders', 'color:#888', redactHeaders(headers));
+  console.log('%cRequest body', 'color:#888', requestBody);
   console.log('%cSystem Prompt', 'color:#888', prompt.systemPrompt);
   console.log('%cUser Message', 'color:#888', prompt.userMessage);
-  console.groupEnd();
 
   try {
-    var response = await fetch(apiUrl, {
-      method:'POST', headers:{'Content-Type':'application/json'},
+    var response = await fetch(url, {
+      method:'POST', headers: headers,
       body: JSON.stringify(requestBody)
     });
     if (!response.ok) {
       var errBody = await response.text().catch(function(){ return ''; });
+      console.log('%cResponse (error)', 'color:#d97070', errBody);
       throw new Error('HTTP ' + response.status + (errBody ? ': ' + errBody.slice(0,160) : ''));
     }
 
     var reader  = response.body.getReader();
     var decoder = new TextDecoder();
     var fullText = ''; var started = false; var buffer = '';
+    var finishReason = null;
 
     while (true) {
       var chunk = await reader.read();
@@ -1548,7 +1662,9 @@ async function triggerCharacter(targetId) {
         if (data === '[DONE]') continue;
         try {
           var parsed = JSON.parse(data);
-          var delta = parsed.choices && parsed.choices[0] && parsed.choices[0].delta && parsed.choices[0].delta.content;
+          var choice = parsed.choices && parsed.choices[0];
+          var delta  = choice && choice.delta && choice.delta.content;
+          if (choice && choice.finish_reason) finishReason = choice.finish_reason;
           if (delta) {
             if (!started) { bubble.textContent = ''; started = true; }
             fullText += delta;
@@ -1559,19 +1675,38 @@ async function triggerCharacter(targetId) {
       }
     }
 
+    console.log('%cResponse text', 'color:#888', fullText);
+    console.log('%cfinish_reason', 'color:#888', finishReason);
+
     if (!started || !fullText.trim()) {
       bubble.innerHTML = '<span style="color:var(--color-text-tertiary);font-style:italic;">No response generated.</span>';
     } else {
-      programState.transcript.push({ speakerName:p.displayName, participantId:targetId, text:fullText.trim() });
+      if (finishReason === 'length') {
+        var warn = document.createElement('div');
+        warn.style.cssText = 'margin-top:6px;font-size:11px;color:#d4956a;font-style:italic;';
+        warn.textContent = '⚠ Reply was cut off (max_tokens reached).';
+        bubble.appendChild(warn);
+      }
+      programState.transcript.push({
+        speakerName: p.displayName,
+        participantId: targetId,
+        text: fullText.trim(),
+        presentCharacters: currentPresentIds()
+      });
     }
   } catch(err) {
     console.error('[Holodeck] API Error:', err);
-    bubble.innerHTML = '<span style="color:#d97070;font-style:italic;">Error: ' + err.message + '</span>';
-    setApiStatus('Connection failed — check Base URL and model name.', '#d97070');
+    bubble.innerHTML = '<span style="color:#d97070;font-style:italic;">Error: ' + escHtml(err.message) + '</span>';
+    setApiStatus('✗ ' + err.message, '#d97070');
   } finally {
     isGenerating = false;
     setTriggerButtonsDisabled(false);
+    console.groupEnd();
   }
+}
+
+function currentPresentIds() {
+  return Object.keys(programState.participants).filter(function(id){ return presence[id]; });
 }
 
 function setTriggerButtonsDisabled(disabled) {
@@ -1784,9 +1919,24 @@ function sendMessage() {
 
   var result = createMsgRow(currentId, text, true);
   container.appendChild(result.row);
-  programState.transcript.push({ speakerName:p.displayName, participantId:currentId, text:text });
+  programState.transcript.push({
+    speakerName: p.displayName,
+    participantId: currentId,
+    text: text,
+    presentCharacters: currentPresentIds()
+  });
   input.value = ''; input.style.height = 'auto';
   container.scrollTop = container.scrollHeight;
+}
+
+// Backfill seeded transcripts — assume everyone in the participant list was
+// present during the pre-authored turns. Live turns get tagged at the moment
+// they are created.
+function backfillTranscriptPresence() {
+  var allIds = Object.keys(programState.participants);
+  programState.transcript.forEach(function(msg) {
+    if (!msg.presentCharacters) msg.presentCharacters = allIds.slice();
+  });
 }
 
 var msgInput = document.getElementById('msg-input');
@@ -1962,6 +2112,8 @@ function switchProgram(id) {
   presence = {};
   Object.keys(programState.participants).forEach(function(k){ presence[k] = true; });
 
+  backfillTranscriptPresence();
+
   // Re-render Arch
   renderParticipants();
   renderArchEnvironments();
@@ -2108,6 +2260,7 @@ function renderLevel(items,container,depth){
 // ═══════════════════════════════════════════════════════════════════
 //  INIT
 // ═══════════════════════════════════════════════════════════════════
+backfillTranscriptPresence();
 renderTree();
 renderParticipants();
 renderArchEnvironments();
