@@ -94,6 +94,10 @@
     .arch-item:hover .arch-item-actions { display: flex !important; }
     .arch-item:hover .arch-item-name { padding-right: 4px; }
 
+    /* ── Tree item hover actions ── */
+    .tree-item .tree-prog-del { visibility: hidden; }
+    .tree-item:hover .tree-prog-del { visibility: visible; }
+
     /* ═══ MODAL SYSTEM ═══════════════════════════════════════════════ */
     .modal-overlay {
       position: fixed; inset: 0;
@@ -274,6 +278,25 @@
 
 <!-- ─── Modal Overlay ─────────────────────────────────────────────── -->
 <div class="modal-overlay" id="modal-overlay" onclick="handleOverlayClick(event)"></div>
+
+<!-- ─── Confirm Dialog ───────────────────────────────────────────── -->
+<div class="modal-overlay" id="confirm-overlay" style="z-index:500;" onclick="closeConfirm()"></div>
+<div class="modal-box" id="confirm-box" style="width:320px;z-index:501;">
+  <div class="modal-header">
+    <div class="modal-title" id="confirm-title">Confirm</div>
+    <button onclick="closeConfirm()" style="color:var(--color-text-secondary);display:flex;align-items:center;padding:2px;">
+      <i class="ti ti-x" style="font-size:15px;"></i>
+    </button>
+  </div>
+  <div class="modal-body" style="padding:14px 18px;">
+    <div id="confirm-message" style="font-size:13px;color:var(--color-text-secondary);line-height:1.5;"></div>
+  </div>
+  <div class="modal-footer" style="display:flex;">
+    <div class="modal-footer-note"></div>
+    <button class="btn-ghost" onclick="closeConfirm()">Cancel</button>
+    <button id="confirm-ok-btn" class="btn-primary" style="background:#c0392b;" onclick="if(_doConfirm)_doConfirm()">Delete</button>
+  </div>
+</div>
 
 <!-- ─── Modal Box ─────────────────────────────────────────────────── -->
 <div class="modal-box" id="modal-box">
@@ -636,6 +659,21 @@ function closeModal() {
 
 function handleOverlayClick(e) {
   if (e.target === document.getElementById('modal-overlay')) closeModal();
+}
+
+// ─── Confirm dialog ───────────────────────────────────────────────
+var _doConfirm = null;
+function showConfirm(title, message, onConfirm) {
+  document.getElementById('confirm-title').textContent = title;
+  document.getElementById('confirm-message').textContent = message;
+  _doConfirm = function() { closeConfirm(); onConfirm(); };
+  document.getElementById('confirm-overlay').classList.add('open');
+  document.getElementById('confirm-box').classList.add('open');
+}
+function closeConfirm() {
+  document.getElementById('confirm-overlay').classList.remove('open');
+  document.getElementById('confirm-box').classList.remove('open');
+  _doConfirm = null;
 }
 
 // Called only from the "+ Create new …" link inside the library view
@@ -1780,6 +1818,12 @@ function renderParticipants() {
     // Remove participant
     var removeBtn = document.createElement('button');
     removeBtn.style.cssText = 'color:var(--color-text-secondary);padding:2px;flex-shrink:0;display:flex;align-items:center;opacity:' + (isUser?'0.1':'0.45') + ';' + (isUser?'pointer-events:none;':'');
+    removeBtn.title = 'Delete participant';
+    if (!isUser) {
+      removeBtn.onclick = (function(k, name){ return function(){
+        showConfirm('Delete participant', 'Remove ' + name + ' from this program?', function(){ deleteParticipant(k); });
+      }; })(id, p.displayName);
+    }
     var removeI = document.createElement('i');
     removeI.className = 'ti ti-x'; removeI.style.fontSize = '12px';
     removeBtn.appendChild(removeI);
@@ -1819,6 +1863,16 @@ function renderParticipants() {
   });
 }
 
+
+function deleteParticipant(id) {
+  if (programState.userPersonaId === id) {
+    var remaining = Object.keys(programState.participants).filter(function(k){ return k !== id; });
+    if (remaining.length > 0) switchPersona(remaining[0]);
+  }
+  delete programState.participants[id];
+  delete presence[id];
+  renderParticipants();
+}
 
 // ═══════════════════════════════════════════════════════════════════
 //  PERSONA SWITCHING
@@ -2164,6 +2218,30 @@ function startRename(id) {
   });
 }
 
+function deleteProgram(id) {
+  removeItem(id);
+  delete programsStore[id];
+  if (activeProgramId === id) {
+    var flat = [];
+    function flattenPrograms(arr) { arr.forEach(function(n){ if(n.type==='program') flat.push(n.id); if(n.children) flattenPrograms(n.children); }); }
+    flattenPrograms(treeData);
+    if (flat.length > 0) {
+      switchProgram(flat[0]);
+    } else {
+      activeProgramId = null;
+      programState.environments = []; programState.scenarios = [];
+      programState.participants = {}; programState.userPersonaId = null;
+      programState.transcript = [];
+      presence = {};
+      renderParticipants(); renderArchEnvironments(); renderArchScenarios();
+      document.getElementById('messages-container').innerHTML = '';
+      renderTree();
+    }
+  } else {
+    renderTree();
+  }
+}
+
 function findItem(id,arr){arr=arr||treeData;for(var i=0;i<arr.length;i++){if(arr[i].id===id)return arr[i];if(arr[i].children){var f=findItem(id,arr[i].children);if(f)return f;}}return null;}
 function removeItem(id,arr){arr=arr||treeData;for(var i=0;i<arr.length;i++){if(arr[i].id===id)return arr.splice(i,1)[0];if(arr[i].children){var f=removeItem(id,arr[i].children);if(f)return f;}}return null;}
 function insertItem(item,tid,pos,arr){arr=arr||treeData;for(var i=0;i<arr.length;i++){if(arr[i].id===tid){if(pos==='into'){arr[i].children=arr[i].children||[];arr[i].children.push(item);arr[i].open=true;}else if(pos==='before')arr.splice(i,0,item);else arr.splice(i+1,0,item);return true;}if(arr[i].children&&insertItem(item,tid,pos,arr[i].children))return true;}return false;}
@@ -2185,6 +2263,16 @@ function renderLevel(items,container,depth){
       var fi=mk('i','ti ti-folder'); fi.style.cssText='font-size:14px;flex-shrink:0;'; el.appendChild(fi);
       var nm=mk('span','tree-label'); nm.textContent=item.name; nm.style.cssText='flex:1;overflow:hidden;text-overflow:ellipsis;'; el.appendChild(nm);
       // Folder action icons
+      // Delete folder button (only when empty) — leftmost action
+      if (!item.children || item.children.length === 0) {
+        var df=mk('i','ti ti-trash tree-prog-del'); df.style.cssText='font-size:12px;cursor:pointer;flex-shrink:0;opacity:0.5;margin-right:3px;';
+        df.title='Delete folder';
+        df.addEventListener('click',function(e){
+          e.stopPropagation();
+          showConfirm('Delete folder', 'Delete folder "' + item.name + '"?', function(){ removeItem(item.id); renderTree(); });
+        });
+        el.appendChild(df);
+      }
       var ap=mk('i','ti ti-plus'); ap.style.cssText='font-size:12px;cursor:pointer;flex-shrink:0;opacity:0.5;';
       ap.title='New program in folder';
       ap.addEventListener('click',function(e){e.stopPropagation();createProgram(item.id);}); el.appendChild(ap);
@@ -2197,6 +2285,14 @@ function renderLevel(items,container,depth){
       var sp=mk('span'); sp.style.cssText='width:11px;flex-shrink:0;'; el.appendChild(sp);
       var mi=mk('i','ti ti-message'); mi.style.cssText='font-size:12px;flex-shrink:0;'; el.appendChild(mi);
       var nm=mk('span','tree-label'); nm.textContent=item.name; nm.style.cssText='flex:1;overflow:hidden;text-overflow:ellipsis;'; el.appendChild(nm);
+      // Delete program button
+      var dp=mk('i','ti ti-trash tree-prog-del'); dp.style.cssText='font-size:12px;cursor:pointer;flex-shrink:0;opacity:0.5;margin-left:2px;';
+      dp.title='Delete program';
+      dp.addEventListener('click',function(e){
+        e.stopPropagation();
+        showConfirm('Delete program', 'Delete "' + item.name + '"? This cannot be undone.', function(){ deleteProgram(item.id); });
+      });
+      el.appendChild(dp);
       // Click to switch program
       el.addEventListener('click', function(e){
         if (draggedId) return;
