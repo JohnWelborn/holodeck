@@ -12,9 +12,6 @@
       --border-radius-md: 8px;
       --border-radius-lg: 12px;
       --font-sans: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Helvetica Neue', Arial, sans-serif;
-      --av-dv-bg: #3a1a12; --av-dv-color: #e8836a;
-      --av-cr-bg: #122038; --av-cr-color: #6baade;
-      --av-ki-bg: #1e1840; --av-ki-color: #8880d8;
       --active-bg: rgba(29,158,117,0.14);
       --active-color: #56c99a;
       --active-border: #1D9E75;
