@@ -26,6 +26,7 @@
       --active-bg: rgba(29,158,117,0.14);
       --active-color: #56c99a;
       --active-border: #1D9E75;
+      --color-dialogue: #c8a86e;
     }
     html, body { height: 100%; background: var(--color-background-tertiary); color: var(--color-text-primary); font-family: var(--font-sans); }
     body { display: flex; align-items: stretch; justify-content: center; padding: 20px; }
@@ -259,6 +260,9 @@
       margin-bottom: 4px; display: flex; align-items: center; gap: 6px;
     }
 
+    /* ── Dialogue colouring ── */
+    .dialogue { color: var(--color-dialogue); font-style: italic; }
+
     /* ── Empty state ── */
     .empty-state {
       text-align: center; padding: 28px 0; color: var(--color-text-tertiary);
@@ -352,56 +356,6 @@
     <!-- ─── CENTER: The Scene ─────────────────────────────────────── -->
     <div style="flex:1;min-width:0;display:flex;flex-direction:column;background:var(--color-background-primary);">
       <div id="messages-container">
-
-        <!-- Static history — DV msg 1 -->
-        <div class="msg-row" style="display:flex;gap:10px;align-items:flex-start;">
-          <div style="flex-shrink:0;"><div class="av" style="width:30px;height:30px;background:var(--av-dv-bg);"><span style="font-size:10px;font-weight:500;color:var(--av-dv-color);">DV</span><img src="https://randomuser.me/api/portraits/women/44.jpg" alt="" onerror="this.style.display='none'"></div></div>
-          <div style="min-width:0;">
-            <div style="display:flex;align-items:center;gap:5px;margin-bottom:3px;">
-              <span style="font-size:11px;color:var(--color-text-secondary);">Dr. Vasquez</span>
-              <div class="msg-actions" style="display:none;align-items:center;gap:6px;"><i class="ti ti-pencil" title="Edit" style="font-size:11px;color:var(--color-text-secondary);cursor:pointer;"></i><i class="ti ti-trash" title="Delete" style="font-size:11px;color:var(--color-text-secondary);cursor:pointer;"></i><i class="ti ti-star" title="Star" style="font-size:11px;color:var(--color-text-secondary);cursor:pointer;"></i><i class="ti ti-git-fork" title="Fork" style="font-size:11px;color:var(--color-text-secondary);cursor:pointer;"></i><span style="width:0.5px;height:10px;background:var(--color-border-secondary);display:inline-block;margin:0 3px;"></span><i class="ti ti-refresh" title="Generate new message" style="font-size:11px;color:var(--color-text-secondary);cursor:pointer;"></i><i class="ti ti-chevron-left" title="Previous generation" style="font-size:10px;color:var(--color-text-secondary);cursor:pointer;"></i><span title="Generation 1 of 1" style="font-size:10px;color:var(--color-text-secondary);cursor:default;user-select:none;white-space:nowrap;">1/1</span><i class="ti ti-chevron-right" title="Next generation" style="font-size:10px;color:var(--color-text-secondary);cursor:pointer;"></i></div>
-            </div>
-            <div style="background:var(--color-background-secondary);border-radius:0 10px 10px 10px;padding:8px 12px;font-size:13px;line-height:1.65;display:inline-block;">Dr. Vasquez glanced at her console, jaw tight. <em>"Decompression is accelerating — we have maybe four minutes before the bridge is uninhabitable. I need someone to manually seal junction 7-Alpha."</em> Her eyes swept the room, waiting for a volunteer.</div>
-          </div>
-        </div>
-
-        <!-- CR msg -->
-        <div class="msg-row" style="display:flex;gap:10px;align-items:flex-start;">
-          <div style="flex-shrink:0;"><div class="av" style="width:30px;height:30px;background:var(--av-cr-bg);"><span style="font-size:10px;font-weight:500;color:var(--av-cr-color);">CR</span></div></div>
-          <div style="min-width:0;">
-            <div style="display:flex;align-items:center;gap:5px;margin-bottom:3px;">
-              <span style="font-size:11px;color:var(--color-text-secondary);">Cmdr. Reyes</span>
-              <div class="msg-actions" style="display:none;align-items:center;gap:6px;"><i class="ti ti-pencil" title="Edit" style="font-size:11px;color:var(--color-text-secondary);cursor:pointer;"></i><i class="ti ti-trash" title="Delete" style="font-size:11px;color:var(--color-text-secondary);cursor:pointer;"></i><i class="ti ti-star" title="Star" style="font-size:11px;color:var(--color-text-secondary);cursor:pointer;"></i><i class="ti ti-git-fork" title="Fork" style="font-size:11px;color:var(--color-text-secondary);cursor:pointer;"></i><span style="width:0.5px;height:10px;background:var(--color-border-secondary);display:inline-block;margin:0 3px;"></span><i class="ti ti-refresh" title="Generate new message" style="font-size:11px;color:var(--color-text-secondary);cursor:pointer;"></i><i class="ti ti-chevron-left" title="Previous generation" style="font-size:10px;color:var(--color-text-secondary);cursor:pointer;"></i><span title="Generation 1 of 1" style="font-size:10px;color:var(--color-text-secondary);cursor:default;user-select:none;white-space:nowrap;">1/1</span><i class="ti ti-chevron-right" title="Next generation" style="font-size:10px;color:var(--color-text-secondary);cursor:pointer;"></i></div>
-            </div>
-            <div style="background:var(--color-background-secondary);border-radius:0 10px 10px 10px;padding:8px 12px;font-size:13px;line-height:1.65;display:inline-block;">Reyes turned from the tactical display, voice level despite the alarms. <em>"Kira, you're the closest to the junction. Can you get there in time?"</em></div>
-          </div>
-        </div>
-
-        <!-- Ki msg (user) -->
-        <div class="msg-row" style="display:flex;gap:10px;align-items:flex-start;">
-          <div style="flex-shrink:0;"><div class="av" style="width:30px;height:30px;background:var(--av-ki-bg);"><span style="font-size:10px;font-weight:500;color:var(--av-ki-color);">Ki</span><img src="https://randomuser.me/api/portraits/women/63.jpg" alt="" onerror="this.style.display='none'"></div></div>
-          <div style="min-width:0;">
-            <div style="display:flex;align-items:center;gap:5px;margin-bottom:3px;">
-              <span style="font-size:11px;color:var(--color-text-secondary);">Kira</span>
-              <i class="ti ti-message-2 persona-indicator" data-for="Ki" style="font-size:11px;color:#1D9E75;display:inline;" title="Your active voice"></i>
-              <div class="msg-actions" style="display:none;align-items:center;gap:6px;"><i class="ti ti-pencil" title="Edit" style="font-size:11px;color:var(--color-text-secondary);cursor:pointer;"></i><i class="ti ti-trash" title="Delete" style="font-size:11px;color:var(--color-text-secondary);cursor:pointer;"></i><i class="ti ti-star" title="Star" style="font-size:11px;color:var(--color-text-secondary);cursor:pointer;"></i><i class="ti ti-git-fork" title="Fork" style="font-size:11px;color:var(--color-text-secondary);cursor:pointer;"></i><span style="width:0.5px;height:10px;background:var(--color-border-secondary);display:inline-block;margin:0 3px;"></span><i class="ti ti-refresh" title="Generate new message" style="font-size:11px;color:var(--color-text-secondary);cursor:pointer;"></i><i class="ti ti-chevron-left" title="Previous generation" style="font-size:10px;color:var(--color-text-secondary);cursor:pointer;"></i><span title="Generation 1 of 1" style="font-size:10px;color:var(--color-text-secondary);cursor:default;user-select:none;white-space:nowrap;">1/1</span><i class="ti ti-chevron-right" title="Next generation" style="font-size:10px;color:var(--color-text-secondary);cursor:pointer;"></i></div>
-            </div>
-            <div style="background:var(--color-background-secondary);border:0.5px solid var(--color-border-secondary);border-radius:0 10px 10px 10px;padding:8px 12px;font-size:13px;line-height:1.65;display:inline-block;">Kira was already on her feet, moving toward the corridor hatch. <em>"Already moving. Vasquez, what's the override code?"</em></div>
-          </div>
-        </div>
-
-        <!-- DV msg 2 -->
-        <div class="msg-row" style="display:flex;gap:10px;align-items:flex-start;">
-          <div style="flex-shrink:0;"><div class="av" style="width:30px;height:30px;background:var(--av-dv-bg);"><span style="font-size:10px;font-weight:500;color:var(--av-dv-color);">DV</span><img src="https://randomuser.me/api/portraits/women/44.jpg" alt="" onerror="this.style.display='none'"></div></div>
-          <div style="min-width:0;">
-            <div style="display:flex;align-items:center;gap:5px;margin-bottom:3px;">
-              <span style="font-size:11px;color:var(--color-text-secondary);">Dr. Vasquez</span>
-              <div class="msg-actions" style="display:none;align-items:center;gap:6px;"><i class="ti ti-pencil" title="Edit" style="font-size:11px;color:var(--color-text-secondary);cursor:pointer;"></i><i class="ti ti-trash" title="Delete" style="font-size:11px;color:var(--color-text-secondary);cursor:pointer;"></i><i class="ti ti-star" title="Star" style="font-size:11px;color:var(--color-text-secondary);cursor:pointer;"></i><i class="ti ti-git-fork" title="Fork" style="font-size:11px;color:var(--color-text-secondary);cursor:pointer;"></i><span style="width:0.5px;height:10px;background:var(--color-border-secondary);display:inline-block;margin:0 3px;"></span><i class="ti ti-refresh" title="Generate new message" style="font-size:11px;color:var(--color-text-secondary);cursor:pointer;"></i><i class="ti ti-chevron-left" title="Previous generation" style="font-size:10px;color:var(--color-text-secondary);cursor:pointer;"></i><span title="Generation 1 of 1" style="font-size:10px;color:var(--color-text-secondary);cursor:default;user-select:none;white-space:nowrap;">1/1</span><i class="ti ti-chevron-right" title="Next generation" style="font-size:10px;color:var(--color-text-secondary);cursor:pointer;"></i></div>
-            </div>
-            <div style="background:var(--color-background-secondary);border-radius:0 10px 10px 10px;padding:8px 12px;font-size:13px;line-height:1.65;display:inline-block;">Vasquez pulled up the engineering schematic on her wrist display. <em>"7-7-Omicron-3. Hold it three seconds after the amber light — don't let go early."</em> She watched the corridor feed, fingers hovering over the pressure controls.</div>
-          </div>
-        </div>
-
       </div>
 
       <!-- Input area -->
@@ -473,6 +427,10 @@ function escHtml(str) {
   return String(str || '')
     .replace(/&/g,'&amp;').replace(/</g,'&lt;')
     .replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+}
+function renderDialogue(text) {
+  return escHtml(text).replace(/&quot;([\s\S]*?)&quot;/g,
+    '<span class="dialogue">&quot;$1&quot;</span>');
 }
 function generateInitials(name) {
   var parts = (name || '').trim().split(/\s+/);
@@ -1514,7 +1472,7 @@ function createMsgRow(participantId, text, isUserMsg) {
     'padding:8px 12px;font-size:13px;line-height:1.65;',
     'display:inline-block;white-space:pre-wrap;word-break:break-word;'
   ].join('');
-  if (text) bubble.textContent = text;
+  if (text) bubble.innerHTML = renderDialogue(text);
   content.appendChild(bubble);
   row.appendChild(content);
 
@@ -1681,6 +1639,7 @@ async function triggerCharacter(targetId) {
     if (!started || !fullText.trim()) {
       bubble.innerHTML = '<span style="color:var(--color-text-tertiary);font-style:italic;">No response generated.</span>';
     } else {
+      bubble.innerHTML = renderDialogue(fullText.trim());
       if (finishReason === 'length') {
         var warn = document.createElement('div');
         warn.style.cssText = 'margin-top:6px;font-size:11px;color:#d4956a;font-style:italic;';
@@ -2265,6 +2224,15 @@ renderTree();
 renderParticipants();
 renderArchEnvironments();
 renderArchScenarios();
+(function() {
+  var container = document.getElementById('messages-container');
+  programState.transcript.forEach(function(msg) {
+    var isUser = msg.participantId === programState.userPersonaId;
+    var result = createMsgRow(msg.participantId, msg.text, isUser);
+    container.appendChild(result.row);
+  });
+  container.scrollTop = container.scrollHeight;
+})();
 </script>
 </body>
 </html>
