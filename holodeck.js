@@ -62,7 +62,7 @@ var selectedPaletteIndex = 0;
 // ═══════════════════════════════════════════════════════════════════
 //  VISUAL STATE
 // ═══════════════════════════════════════════════════════════════════
-var presence     = { DV:true, CR:true, Ki:true };
+var presence     = { JO:true, ST:true, CL:true };
 var isGenerating = false;
 
 // ═══════════════════════════════════════════════════════════════════
@@ -1406,7 +1406,7 @@ msgInput.addEventListener('input', function(){
 });
 
 
-var activeProgramId = 'p1';
+var activeProgramId = 'p7';
 var draggedId = null;
 
 // ─── Switch program ────────────────────────────────────────────────
@@ -1876,6 +1876,18 @@ renderParticipants();
 renderArchEnvironments();
 renderArchScenarios();
 (function() {
+  var uid = programState.userPersonaId;
+  var pp  = uid ? programState.participants[uid] : null;
+  if (pp) {
+    document.getElementById('chip-avatar').style.background = pp.bg;
+    document.getElementById('chip-initials').textContent    = pp.initials;
+    document.getElementById('chip-initials').style.color    = pp.color;
+    var cp = document.getElementById('chip-photo');
+    if (pp.photo) { cp.src = pp.photo; cp.style.display = ''; }
+    else          { cp.style.display = 'none'; }
+    document.getElementById('chip-name').textContent    = pp.displayName;
+    document.getElementById('msg-input').placeholder    = 'Type a message as ' + pp.displayName + '...';
+  }
   var container = document.getElementById('messages-container');
   programState.transcript.forEach(function(msg) {
     var isUser = msg.participantId === programState.userPersonaId;

@@ -36,77 +36,61 @@ var library = {
 var programState = {
 
   environments: [
-    {
-      id: 'env-enterprise',
-      name: 'Enterprise',
-      description: 'The command center of the USS Meridian — a wide semicircular space dominated by the main viewscreen. Workstations ring the perimeter. Red alert lighting pulses at a slow rhythm. The air carries the acrid smell of overheated conduits and recycled oxygen. Hull stress groans echo at irregular intervals from somewhere below decks.'
-    },
-    {
-      id: 'env-jefferies',
-      name: 'Jefferies Tube 4',
-      description: 'A narrow maintenance crawlway branching off Deck 5, wide enough for one person moving fast and no more. Junction 7-Alpha sits at the far end — a manual pressure seal that has not been touched in eighteen months. Emergency amber lighting only, strips embedded flush with the floor. The hatch vibrates faintly with the pressure differential outside.'
-    }
+    { id:'env-trailer', name:'Abandoned Trailer', description:'A rusted trailer sitting off a dirt road in the Nevada desert. Hot, dusty, smells like old cans. There\'s a fold-out table, a few shelves with some food, and one small window with a cracked pane. Outside: flat scrubland in every direction, the sun getting lower.' }
   ],
 
   scenarios: [
-    {
-      id: 'scen-decompression',
-      name: 'Emergency decompression',
-      description: 'A microfracture in the forward hull has widened into a full rupture and is venting atmosphere at an accelerating rate. The bridge has approximately four minutes before pressure drops below survivable levels. Junction 7-Alpha must be manually sealed to isolate the damaged section and buy time for structural repairs. Every second of deliberation costs lives.'
-    }
+    { id:'scen-together', name:'Together or not', description:'John and Stew have been walking since dawn. They found this trailer and another survivor — a girl named Cleverly — who\'s been alone out here for two days. There are supplies on the shelf, but not enough for three people and a long walk. They need to decide right now: travel together, or go separate ways. Stew\'s insulin situation means every hour counts.' }
   ],
 
   participants: {
-    DV: {
-      id:'DV', displayName:'Dr. Vasquez', fullName:'Dr. Elena Vasquez',
-      initials:'DV', role:"Ship's doctor",
-      bg:'var(--av-dv-bg)', color:'var(--av-dv-color)',
-      photo:'https://randomuser.me/api/portraits/women/44.jpg',
-      traits:[{id:'trait-tired',name:'Exhausted',description:'Visibly fatigued — slower reactions, heavier movements, less patience.'},{id:'trait-custom-1',name:'Under pressure',description:'The weight of every life aboard is felt in every decision right now.'}],
-      personality:'Vasquez is precise, direct, and quietly authoritative. Under pressure she becomes more compressed — fewer words, faster decisions. She carries the weight of responsibility for every person aboard and it shows in her eyes. She does not panic, but she makes the stakes felt. She is the person in the room who always knows exactly how bad it is, and she does not soften that information.',
-      speech:'Terse and clinical under stress. Medical and engineering jargon used naturally, never explained to listeners who should already know it. Gives orders framed as statements of fact. Never raises her voice — a drop to a lower register is her version of urgency. Addresses people by name or title, never both at once.',
-      knowledge:'She detected the microfracture on her console thirty seconds before the general alarm. She has already calculated the decompression rate and knows the four-minute window is optimistic — it is probably closer to three. She knows junction 7-Alpha can be sealed manually but requires someone physically present at the hatch. She has the override code memorized: 7-7-Omicron-3.',
+    JO: {
+      id:'JO', displayName:'John', fullName:'John Lockwood',
+      initials:'JO', role:'Older brother (13)',
+      bg:'#1a2010', color:'#8ab858',
+      photo:'https://api.dicebear.com/9.x/adventurer/svg?seed=JohnLockwood13&backgroundColor=1a2010&skinColor=f8d9c4&hair=short01',
+      traits:[],
+      personality:'Protective and practical. Every decision he makes is about getting Stew to Brighton Ranch before the insulin runs out. He\'s scared but keeps his voice steady.',
+      speech:'Calm even when he\'s not. Thinks before he talks.',
+      knowledge:'Stew has maybe 3 days before his blood sugar becomes dangerous. Brighton Ranch is the only place John knows has insulin. Cleverly has a map she hasn\'t fully opened yet.',
       perspectives:{
-        CR:"Trusts Reyes's command judgment completely. He's steady under pressure, which is what the room needs. She appreciates that he assigns rather than asks — it moves things faster.",
-        Ki:"Seen Kira work fast under pressure before, in the Lyra incident and the Deck 3 fire. Respects the competence. Doesn't know her well personally, but trusts her hands."
+        ST:'Stew pretends he\'s fine. He\'s not. John can tell by how much water he\'s been drinking.',
+        CL:'She survived two days alone out here. That\'s not nothing. But she\'s holding something back.'
       }
     },
-    CR: {
-      id:'CR', displayName:'Cmdr. Reyes', fullName:'Cmdr. Marcus Reyes',
-      initials:'CR', role:'First officer',
-      bg:'var(--av-cr-bg)', color:'var(--av-cr-color)',
-      photo:null,
-      traits:[{id:'trait-angry',name:'Frustrated',description:'Holding back frustration. Words come out sharper than intended.'}],
-      personality:'Reyes leads from stillness. He processes fast and speaks deliberately — the pacing of someone who learned early that calm is contagious. He carries authority naturally, not through volume or posture but through clarity. He is decisive and deeply protective of his crew. He has made the calculation before: which life for which outcome. He does not let that show.',
-      speech:"Level and measured. Rarely contracts words when under pressure — \"cannot\" not \"can't.\" Uses names directly and immediately when addressing someone. Tends toward the imperative softened to a question: \"Can you get there?\" rather than \"Get there.\" Does not repeat himself.",
-      knowledge:"He was tracking structural integrity readings when the fracture opened — saw it a moment after Vasquez did. He knows Kira's position in the ship: she checked in from near Deck 5 during a systems run fifteen minutes before the alarm. He does not have the override code for 7-Alpha and would need to get it from Vasquez.",
+    ST: {
+      id:'ST', displayName:'Stew', fullName:'Stewart Lockwood',
+      initials:'ST', role:'Younger brother (11)',
+      bg:'#201a10', color:'#c4903a',
+      photo:'https://api.dicebear.com/9.x/adventurer/svg?seed=StewLockwood11&backgroundColor=201a10&skinColor=f8d9c4&hair=short03',
+      traits:[{id:'trait-tired', name:'Tired', description:'Visibly fatigued — slower reactions, heavier movements, less patience.'}],
+      personality:'Stubborn about not being treated like the sick kid. He\'s the reason they have to hurry and he hates it. Makes jokes when things get tense.',
+      speech:'Tries to keep things light. Pushes back when John treats him like a burden.',
+      knowledge:'He\'s been thirstier than usual all morning — not a good sign. He hasn\'t told John. He also heard John say "three days max" on the phone the night before the blackout.',
       perspectives:{
-        DV:'Vasquez is the most competent person on this bridge. When she calculates four minutes, he believes four minutes. He defers to her numbers without question and trusts her to flag anything he needs to know.',
-        Ki:'Fast, capable, no need for lengthy explanation. He has sent her into worse situations and she has come back from every one. He trusts her the way you trust a tool you have never seen fail.'
+        JO:'John is keeping something from him. He\'s going to find out what.'
       }
     },
-    Ki: {
-      id:'Ki', displayName:'Kira', fullName:'Kira',
-      initials:'Ki', role:'Engineer',
-      bg:'var(--av-ki-bg)', color:'var(--av-ki-color)',
-      photo:'https://randomuser.me/api/portraits/women/63.jpg',
-      personality:"Kira is kinetic — she thinks best when moving. She has the engineer's habit of solving first and reporting second. Not reckless, but impatient with deliberation when the problem is already obvious. She masks tension with dry brevity and forward motion. She is uncomfortable when there is nothing physical to do.",
-      speech:"Short sentences. Drops subjects when the referent is obvious — \"Already moving\" not \"I'm already moving.\" Technical shorthand used naturally, no jargon inflation. Her version of \"I understand and will comply\" is already gone before she finishes saying it.",
-      knowledge:"She was in the corridor near Deck 5 doing a maintenance survey when the alert hit — she is closer to 7-Alpha than anyone on the bridge by at least ninety seconds. She knows the junction layout from memory; she ran a full maintenance cycle on it six weeks ago. She does not have the override code and will need it from Vasquez.",
+    CL: {
+      id:'CL', displayName:'Cleverly', fullName:'Cleverly',
+      initials:'CL', role:'Stranger (14)',
+      bg:'#201010', color:'#c45858',
+      photo:'https://api.dicebear.com/9.x/adventurer/svg?seed=CleverlyGirl14&backgroundColor=201010&skinColor=f8d9c4',
+      traits:[],
+      personality:'Sharp and self-reliant. Kept herself alive for two days alone and isn\'t going to pretend that\'s easy. Doesn\'t trust easily but isn\'t mean about it.',
+      speech:'Blunt. Asks the question everyone else is avoiding.',
+      knowledge:'Her map shows a gas station town 12 miles off the Brighton Ranch route. It might have supplies — maybe insulin. She hasn\'t mentioned it yet because she doesn\'t know if she can trust these two.',
       perspectives:{
-        DV:'Vasquez always knows exactly how bad it is and tells you plainly, which Kira finds useful. She listens when Vasquez gives numbers because the numbers are always right.',
-        CR:"Reyes doesn't waste words and doesn't waste her time. If he's saying her name in that tone, she should already be moving. She trusts his read of a room completely."
+        ST:'He\'s sick and he knows it and he won\'t say so. She respects that, but it\'s not a great survival strategy.'
       }
     }
   },
 
-  userPersonaId: 'Ki',
+  userPersonaId: 'JO',
 
   transcript: [
-    { speakerName:'Dr. Vasquez', participantId:'DV', text:'Dr. Vasquez glanced at her console, jaw tight. "Decompression is accelerating — we have maybe four minutes before the bridge is uninhabitable. I need someone to manually seal junction 7-Alpha." Her eyes swept the room, waiting for a volunteer.' },
-    { speakerName:'Cmdr. Reyes', participantId:'CR', text:'Reyes turned from the tactical display, voice level despite the alarms. "Kira, you\'re the closest to the junction. Can you get there in time?"' },
-    { speakerName:'Kira',        participantId:'Ki', text:'Kira was already on her feet, moving toward the corridor hatch. "Already moving. Vasquez, what\'s the override code?"' },
-    { speakerName:'Dr. Vasquez', participantId:'DV', text:'Vasquez pulled up the engineering schematic on her wrist display. "7-7-Omicron-3. Hold it three seconds after the amber light — don\'t let go early." She watched the corridor feed, fingers hovering over the pressure controls.' }
+    { speakerName:'Cleverly', participantId:'CL', text:'Cleverly set her map on the table without unfolding it all the way. She looked at John. "So. Together or not."' },
+    { speakerName:'Stew',     participantId:'ST', text:'Stew picked up a can of beans and shook it. "I vote together. She found food."' }
   ]
 };
 
@@ -223,6 +207,25 @@ var programsStore = {
     transcript: [
       { speakerName:'Priya', participantId:'HM', text:'Priya looked up from the resume. "Thanks for walking us through that — it\'s a solid background. I want to get into something more specific." She set the paper down. "Tell me about a product decision you made that turned out to be wrong. Not a mistake someone else made — something you owned. What happened and what did you do about it?"' }
     ]
+  },
+
+  p7: {
+    environments: [
+      { id:'env-trailer', name:'Abandoned Trailer', description:'A rusted trailer sitting off a dirt road in the Nevada desert. Hot, dusty, smells like old cans. There\'s a fold-out table, a few shelves with some food, and one small window with a cracked pane. Outside: flat scrubland in every direction, the sun getting lower.' }
+    ],
+    scenarios: [
+      { id:'scen-together', name:'Together or not', description:'John and Stew have been walking since dawn. They found this trailer and another survivor — a girl named Cleverly — who\'s been alone out here for two days. There are supplies on the shelf, but not enough for three people and a long walk. They need to decide right now: travel together, or go separate ways. Stew\'s insulin situation means every hour counts.' }
+    ],
+    participants: {
+      JO: { id:'JO', displayName:'John', fullName:'John Lockwood', initials:'JO', role:'Older brother (13)', bg:'#1a2010', color:'#8ab858', photo:'https://api.dicebear.com/9.x/adventurer/svg?seed=JohnLockwood13&backgroundColor=1a2010&skinColor=f8d9c4&hair=short01', traits:[], personality:'Protective and practical. Every decision he makes is about getting Stew to Brighton Ranch before the insulin runs out. He\'s scared but keeps his voice steady.', speech:'Calm even when he\'s not. Thinks before he talks.', knowledge:'Stew has maybe 3 days before his blood sugar becomes dangerous. Brighton Ranch is the only place John knows has insulin. Cleverly has a map she hasn\'t fully opened yet.', perspectives:{ ST:'Stew pretends he\'s fine. He\'s not. John can tell by how much water he\'s been drinking.', CL:'She survived two days alone out here. That\'s not nothing. But she\'s holding something back.' } },
+      ST: { id:'ST', displayName:'Stew', fullName:'Stewart Lockwood', initials:'ST', role:'Younger brother (11)', bg:'#201a10', color:'#c4903a', photo:'https://api.dicebear.com/9.x/adventurer/svg?seed=StewLockwood11&backgroundColor=201a10&skinColor=f8d9c4&hair=short03', traits:[{id:'trait-tired', name:'Tired', description:'Visibly fatigued — slower reactions, heavier movements, less patience.'}], personality:'Stubborn about not being treated like the sick kid. He\'s the reason they have to hurry and he hates it. Makes jokes when things get tense.', speech:'Tries to keep things light. Pushes back when John treats him like a burden.', knowledge:'He\'s been thirstier than usual all morning — not a good sign. He hasn\'t told John. He also heard John say "three days max" on the phone the night before the blackout.', perspectives:{ JO:'John is keeping something from him. He\'s going to find out what.' } },
+      CL: { id:'CL', displayName:'Cleverly', fullName:'Cleverly', initials:'CL', role:'Stranger (14)', bg:'#201010', color:'#c45858', photo:'https://api.dicebear.com/9.x/adventurer/svg?seed=CleverlyGirl14&backgroundColor=201010&skinColor=f8d9c4', traits:[], personality:'Sharp and self-reliant. Kept herself alive for two days alone and isn\'t going to pretend that\'s easy. Doesn\'t trust easily but isn\'t mean about it.', speech:'Blunt. Asks the question everyone else is avoiding.', knowledge:'Her map shows a gas station town 12 miles off the Brighton Ranch route. It might have supplies — maybe insulin. She hasn\'t mentioned it yet because she doesn\'t know if she can trust these two.', perspectives:{ ST:'He\'s sick and he knows it and he won\'t say so. She respects that, but it\'s not a great survival strategy.' } }
+    },
+    userPersonaId: 'JO',
+    transcript: [
+      { speakerName:'Cleverly', participantId:'CL', text:'Cleverly set her map on the table without unfolding it all the way. She looked at John. "So. Together or not."' },
+      { speakerName:'Stew',     participantId:'ST', text:'Stew picked up a can of beans and shook it. "I vote together. She found food."' }
+    ]
   }
 };
 
@@ -230,8 +233,11 @@ var programsStore = {
 //  PROGRAMS TREE
 // ═══════════════════════════════════════════════════════════════════
 var treeData = [
-  { id:'f1', type:'folder', name:'Star Trek', open:true, children:[
-    { id:'p1', type:'program', name:'Bridge Emergency',    active:true },
+  { id:'f3', type:'folder', name:'Adventure', open:true, children:[
+    { id:'p7', type:'program', name:'96 Miles', active:true }
+  ]},
+  { id:'f1', type:'folder', name:'Star Trek', open:false, children:[
+    { id:'p1', type:'program', name:'Bridge Emergency' },
     { id:'p2', type:'program', name:'Holodeck Malfunction' },
     { id:'p3', type:'program', name:"Captain's Dinner" }
   ]},
