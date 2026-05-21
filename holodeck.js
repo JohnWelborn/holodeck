@@ -798,7 +798,7 @@ function renderArchScenarios() {
 // ═══════════════════════════════════════════════════════════════════
 //  PROMPT BUILDER
 // ═══════════════════════════════════════════════════════════════════
-function buildPrompt(targetId) {
+function buildPrompt(targetId, transcriptOverride) {
   var target = programState.participants[targetId];
 
   var envText = programState.environments.map(function(e){
@@ -835,7 +835,8 @@ function buildPrompt(targetId) {
     });
 
   // Transcript — filter by which entries the target was present for
-  var filteredTranscript = programState.transcript.filter(function(msg){
+  var sourceTranscript = transcriptOverride !== undefined ? transcriptOverride : programState.transcript;
+  var filteredTranscript = sourceTranscript.filter(function(msg){
     if (!msg.presentCharacters) return true;
     return msg.presentCharacters.indexOf(targetId) !== -1;
   });
@@ -934,17 +935,17 @@ function createMsgRow(participantId, text, isUserMsg) {
   var prevBtn = document.createElement('i');
   prevBtn.className = 'ti ti-chevron-left';
   prevBtn.title = 'Previous generation';
-  prevBtn.style.cssText = 'font-size:10px;color:var(--color-text-secondary);cursor:pointer;';
+  prevBtn.style.cssText = 'font-size:10px;color:var(--color-text-secondary);cursor:pointer;display:none;';
   actions.appendChild(prevBtn);
   var genCount = document.createElement('span');
   genCount.title = 'Generation 1 of 1';
-  genCount.style.cssText = 'font-size:10px;color:var(--color-text-secondary);cursor:default;user-select:none;white-space:nowrap;';
+  genCount.style.cssText = 'font-size:10px;color:var(--color-text-secondary);cursor:default;user-select:none;white-space:nowrap;display:none;';
   genCount.textContent = '1/1';
   actions.appendChild(genCount);
   var nextBtn = document.createElement('i');
   nextBtn.className = 'ti ti-chevron-right';
   nextBtn.title = 'Next generation';
-  nextBtn.style.cssText = 'font-size:10px;color:var(--color-text-secondary);cursor:pointer;';
+  nextBtn.style.cssText = 'font-size:10px;color:var(--color-text-secondary);cursor:pointer;display:none;';
   actions.appendChild(nextBtn);
   nameRow.appendChild(actions);
   content.appendChild(nameRow);
@@ -961,7 +962,7 @@ function createMsgRow(participantId, text, isUserMsg) {
   content.appendChild(bubble);
   row.appendChild(content);
 
-  return { row: row, bubble: bubble };
+  return { row: row, bubble: bubble, regenBtn: regenBtn, prevBtn: prevBtn, nextBtn: nextBtn, genCount: genCount };
 }
 
 // ═══════════════════════════════════════════════════════════════════
@@ -1058,6 +1059,33 @@ async function triggerCharacter(targetId) {
   container.appendChild(msgResult.row);
   container.scrollTop = container.scrollHeight;
 
+  try {
+    var fullText = await streamCompletion(targetId, prompt, bubble, container);
+    if (fullText !== null) {
+      programState.transcript.push({
+        speakerName: p.displayName,
+        participantId: targetId,
+        text: fullText,
+        presentCharacters: currentPresentIds(),
+        generations: [fullText],
+        currentGenIdx: 0
+      });
+      wireUpRegenButtons(msgResult, programState.transcript.length - 1);
+    }
+  } catch(err) {
+    console.error('[Holodeck] API Error:', err);
+    bubble.innerHTML = '<span style="color:#d97070;font-style:italic;">Error: ' + escHtml(err.message) + '</span>';
+    setApiStatus('✗ ' + err.message, '#d97070');
+  } finally {
+    isGenerating = false;
+    setTriggerButtonsDisabled(false);
+    if (cyoaMode && !autoMode) generateCYOASuggestions();
+    if (autoMode) autoReply();
+  }
+}
+
+async function streamCompletion(targetId, prompt, bubble, container) {
+  var p = programState.participants[targetId];
   var url = apiEndpoint();
   var headers = buildHeaders();
   var requestBody = {
@@ -1128,31 +1156,98 @@ async function triggerCharacter(targetId) {
 
     if (!started || !fullText.trim()) {
       bubble.innerHTML = '<span style="color:var(--color-text-tertiary);font-style:italic;">No response generated.</span>';
-    } else {
-      bubble.innerHTML = renderDialogue(fullText.trim());
-      if (finishReason === 'length') {
-        var warn = document.createElement('div');
-        warn.style.cssText = 'margin-top:6px;font-size:11px;color:#d4956a;font-style:italic;';
-        warn.textContent = '⚠ Reply was cut off (max_tokens reached).';
-        bubble.appendChild(warn);
-      }
-      programState.transcript.push({
-        speakerName: p.displayName,
-        participantId: targetId,
-        text: fullText.trim(),
-        presentCharacters: currentPresentIds()
-      });
+      return null;
+    }
+
+    bubble.innerHTML = renderDialogue(fullText.trim());
+    if (finishReason === 'length') {
+      var warn = document.createElement('div');
+      warn.style.cssText = 'margin-top:6px;font-size:11px;color:#d4956a;font-style:italic;';
+      warn.textContent = '⚠ Reply was cut off (max_tokens reached).';
+      bubble.appendChild(warn);
+    }
+    return fullText.trim();
+  } finally {
+    console.groupEnd();
+  }
+}
+
+function wireUpRegenButtons(msgResult, transcriptIdx) {
+  var bubble   = msgResult.bubble;
+  var regenBtn = msgResult.regenBtn;
+  var prevBtn  = msgResult.prevBtn;
+  var nextBtn  = msgResult.nextBtn;
+  var genCount = msgResult.genCount;
+
+  function refreshNavControls() {
+    var entry = programState.transcript[transcriptIdx];
+    var n = entry.generations.length;
+    var i = entry.currentGenIdx;
+    if (n > 1) {
+      prevBtn.style.display  = '';
+      genCount.style.display = '';
+      nextBtn.style.display  = '';
+      genCount.textContent = (i + 1) + '/' + n;
+      genCount.title = 'Generation ' + (i + 1) + ' of ' + n;
+      prevBtn.style.opacity = i === 0 ? '0.3' : '1';
+      nextBtn.style.opacity = i === n - 1 ? '0.3' : '1';
+    }
+  }
+
+  function switchTo(idx) {
+    var entry = programState.transcript[transcriptIdx];
+    entry.currentGenIdx = idx;
+    entry.text = entry.generations[idx];
+    bubble.innerHTML = renderDialogue(entry.generations[idx]);
+    refreshNavControls();
+  }
+
+  regenBtn.addEventListener('click', function() {
+    regenerateMessage(transcriptIdx, msgResult, refreshNavControls);
+  });
+
+  prevBtn.addEventListener('click', function() {
+    var entry = programState.transcript[transcriptIdx];
+    if (entry.currentGenIdx > 0) switchTo(entry.currentGenIdx - 1);
+  });
+
+  nextBtn.addEventListener('click', function() {
+    var entry = programState.transcript[transcriptIdx];
+    if (entry.currentGenIdx < entry.generations.length - 1) switchTo(entry.currentGenIdx + 1);
+  });
+}
+
+async function regenerateMessage(transcriptIdx, msgResult, refreshNavControls) {
+  if (isGenerating) return;
+  isGenerating = true;
+  setTriggerButtonsDisabled(true);
+  setApiStatus('');
+
+  var entry    = programState.transcript[transcriptIdx];
+  var targetId = entry.participantId;
+  var prevContent = msgResult.bubble.innerHTML;
+
+  var limitedTranscript = programState.transcript.slice(0, transcriptIdx);
+  var prompt = buildPrompt(targetId, limitedTranscript);
+
+  var container = document.getElementById('messages-container');
+  msgResult.bubble.innerHTML = '<span class="thinking-dot"></span><span class="thinking-dot"></span><span class="thinking-dot"></span>';
+
+  try {
+    var fullText = await streamCompletion(targetId, prompt, msgResult.bubble, container);
+    if (fullText !== null) {
+      entry.generations.push(fullText);
+      entry.currentGenIdx = entry.generations.length - 1;
+      entry.text = fullText;
+      refreshNavControls();
     }
   } catch(err) {
     console.error('[Holodeck] API Error:', err);
-    bubble.innerHTML = '<span style="color:#d97070;font-style:italic;">Error: ' + escHtml(err.message) + '</span>';
+    msgResult.bubble.innerHTML = prevContent;
     setApiStatus('✗ ' + err.message, '#d97070');
   } finally {
     isGenerating = false;
     setTriggerButtonsDisabled(false);
-    console.groupEnd();
-    if (cyoaMode && !autoMode) generateCYOASuggestions();
-    if (autoMode) autoReply();
   }
 }
 
@@ -1385,8 +1480,11 @@ function sendText(text) {
     speakerName: p.displayName,
     participantId: currentId,
     text: text,
-    presentCharacters: currentPresentIds()
+    presentCharacters: currentPresentIds(),
+    generations: [text],
+    currentGenIdx: 0
   });
+  wireUpRegenButtons(result, programState.transcript.length - 1);
   container.scrollTop = container.scrollHeight;
   if (cyoaMode) generateCYOASuggestions();
 }
