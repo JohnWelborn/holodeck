@@ -239,6 +239,32 @@
     }
     .btn-link:hover { text-decoration: underline; }
 
+    /* ── Tone chips ── */
+    .tone-chip {
+      font-size: 11px; padding: 4px 11px; border-radius: 20px;
+      background: var(--color-background-primary);
+      border: 0.5px solid var(--color-border-secondary);
+      color: var(--color-text-secondary); cursor: pointer;
+      font-family: var(--font-sans); transition: color 0.1s, border-color 0.1s;
+    }
+    .tone-chip:hover { color: var(--color-text-primary); border-color: var(--color-border-primary); }
+    .tone-chip.selected {
+      background: var(--active-bg);
+      border-color: var(--active-border);
+      color: var(--active-color);
+    }
+
+    /* ── Program type cards ── */
+    .program-type-card {
+      text-align: left; padding: 12px 14px;
+      border-radius: var(--border-radius-md);
+      border: 0.5px solid var(--color-border-secondary);
+      background: var(--color-background-primary);
+      cursor: pointer; font-family: var(--font-sans); width: 100%;
+      transition: border-color 0.1s;
+    }
+    .program-type-card:hover { border-color: var(--color-border-primary); }
+
     /* ── Color palette swatches ── */
     .palette-grid { display: flex; gap: 8px; flex-wrap: wrap; }
     .color-swatch {

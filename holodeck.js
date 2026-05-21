@@ -1718,6 +1718,10 @@ function switchProgram(id) {
 
 // ─── Create program ────────────────────────────────────────────────
 function createProgram(parentFolderId) {
+  showNewProgramTypeDialog(parentFolderId);
+}
+
+function createProgramManual(parentFolderId) {
   var newId   = 'p-' + Date.now();
   var newItem = { id: newId, type:'program', name:'New Program' };
   programsStore[newId] = { environments:[], scenarios:[], participants:{}, userPersonaId:null, transcript:[] };
@@ -1728,9 +1732,247 @@ function createProgram(parentFolderId) {
     treeData.push(newItem);
   }
   renderTree();
-  // Immediately switch to it and start rename
   switchProgram(newId);
   startRename(newId);
+}
+
+// ─── New Program Type Dialog ───────────────────────────────────────
+var _newProgramParentId = null;
+
+function showNewProgramTypeDialog(parentFolderId) {
+  _newProgramParentId = parentFolderId || null;
+  document.getElementById('new-program-type-overlay').classList.add('open');
+  document.getElementById('new-program-type-box').classList.add('open');
+}
+
+function closeNewProgramType() {
+  document.getElementById('new-program-type-overlay').classList.remove('open');
+  document.getElementById('new-program-type-box').classList.remove('open');
+}
+
+// ─── AI Brief Dialog ───────────────────────────────────────────────
+var AI_BRIEF_TONES = ['Tense','Dramatic','Comedic','Mysterious','Romantic','Action-packed','Horror'];
+var _aiBriefSelectedTones = [];
+
+var AI_PROGRAM_SYSTEM_PROMPT = [
+  'You are a creative writing assistant that generates structured roleplay scenarios for Holodeck, an interactive multi-character fiction tool.',
+  '',
+  'Given a creative brief, return ONLY a valid JSON object — no markdown fences, no prose, no commentary. Raw JSON only.',
+  '',
+  'The JSON must match this schema exactly:',
+  '',
+  '{',
+  '  "name": "Short evocative program title (3-5 words)",',
+  '  "environments": [',
+  '    {',
+  '      "id": "env-<kebab-slug>",',
+  '      "name": "Short location name",',
+  '      "description": "Rich sensory detail: physical layout, atmosphere, lighting, sounds, smells. 2-4 sentences."',
+  '    }',
+  '  ],',
+  '  "scenarios": [',
+  '    {',
+  '      "id": "scen-<kebab-slug>",',
+  '      "name": "Short dramatic label",',
+  '      "description": "What is happening, what the stakes are, what needs to happen next. 2-3 sentences."',
+  '    }',
+  '  ],',
+  '  "participants": {',
+  '    "<INITIALS>": {',
+  '      "id": "<INITIALS>",',
+  '      "displayName": "Short name used in scene (first name or nickname)",',
+  '      "fullName": "Full name",',
+  '      "initials": "<INITIALS>",',
+  '      "role": "Job title or position",',
+  '      "personality": "3-5 sentences on this character\'s core values, disposition, and behavior under pressure. What drives them?",',
+  '      "speech": "2-3 sentences on how they talk: sentence length, vocabulary, verbal tics, jargon, things they never say.",',
+  '      "knowledge": "2-3 sentences on what this character knows RIGHT NOW about this specific situation — not backstory, current awareness and recent discoveries.",',
+  '      "traits": [],',
+  '      "perspectives": {',
+  '        "<OTHER_INITIALS>": "1-2 sentences on how this character views the other right now, in this situation."',
+  '      },',
+  '      "bg": "<hex from palette below>",',
+  '      "color": "<hex from palette below>",',
+  '      "photo": null',
+  '    }',
+  '  },',
+  '  "userPersonaId": "<INITIALS of player\'s character>",',
+  '  "transcript": []',
+  '}',
+  '',
+  'Avatar color palette — assign one pair per participant in order, no repeats:',
+  '1. bg: "#3a1a12", color: "#e8836a"',
+  '2. bg: "#122038", color: "#6baade"',
+  '3. bg: "#1e1840", color: "#8880d8"',
+  '4. bg: "#122a1e", color: "#5abf8a"',
+  '5. bg: "#2a1a10", color: "#d4956a"',
+  '6. bg: "#2a1228", color: "#c87ab8"',
+  '7. bg: "#1a2028", color: "#7aaad4"',
+  '8. bg: "#28201a", color: "#c4a870"',
+  '',
+  'Rules:',
+  '- Initials are 2-3 uppercase characters from the character\'s name (e.g., "DV" for Dr. Vasquez, "HR" for Harlow Reed)',
+  '- Generate 1-2 environments and exactly 1 scenario unless the brief specifies otherwise',
+  '- Default to 3 participants unless the brief specifies a different number',
+  '- Every participant must have a perspectives entry for every other participant — keyed by the other participant\'s initials',
+  '- Set userPersonaId to the character the user says they want to play; if unspecified, choose the most compelling viewpoint character',
+  '- Make personalities genuinely distinct: vary motivations, communication styles, and how each character handles the current situation',
+  '- Knowledge should reflect scene-specific current awareness, not general backstory',
+  '- Perspectives should reflect the current situation, not generic relationship summaries'
+].join('\n');
+
+function showAIBriefDialog() {
+  _aiBriefSelectedTones = [];
+  document.getElementById('ai-brief-premise').value = '';
+  document.getElementById('ai-brief-setting').value = '';
+  document.getElementById('ai-brief-count').value = '';
+  document.getElementById('ai-brief-characters').value = '';
+  document.getElementById('ai-brief-inspirations').value = '';
+  document.getElementById('ai-brief-error').style.display = 'none';
+  document.getElementById('ai-brief-status').textContent = '';
+  var btn = document.getElementById('ai-brief-generate-btn');
+  btn.disabled = false;
+  btn.textContent = 'Generate';
+  renderAIBriefTones();
+  document.getElementById('ai-brief-overlay').classList.add('open');
+  document.getElementById('ai-brief-box').classList.add('open');
+  setTimeout(function(){ document.getElementById('ai-brief-premise').focus(); }, 50);
+}
+
+function closeAIBrief() {
+  document.getElementById('ai-brief-overlay').classList.remove('open');
+  document.getElementById('ai-brief-box').classList.remove('open');
+}
+
+function renderAIBriefTones() {
+  var container = document.getElementById('ai-brief-tones');
+  container.innerHTML = AI_BRIEF_TONES.map(function(tone) {
+    var sel = _aiBriefSelectedTones.indexOf(tone) !== -1;
+    return '<button class="tone-chip' + (sel ? ' selected' : '') + '" onclick="toggleAIBriefTone(\'' + tone + '\')">' + tone + '</button>';
+  }).join('');
+}
+
+function toggleAIBriefTone(tone) {
+  var idx = _aiBriefSelectedTones.indexOf(tone);
+  if (idx === -1) { _aiBriefSelectedTones.push(tone); }
+  else            { _aiBriefSelectedTones.splice(idx, 1); }
+  renderAIBriefTones();
+}
+
+function buildAIBriefUserMessage(briefData) {
+  var parts = [];
+  if (briefData.premise)      { parts.push('Premise: ' + briefData.premise); }
+  if (briefData.setting)      { parts.push('Setting/Genre: ' + briefData.setting); }
+  if (briefData.tones && briefData.tones.length) { parts.push('Tone: ' + briefData.tones.join(', ')); }
+  if (briefData.count)        { parts.push('Number of participants: ' + briefData.count); }
+  if (briefData.characters)   { parts.push('Character sketches: ' + briefData.characters); }
+  if (briefData.inspirations) { parts.push('Inspirations/references: ' + briefData.inspirations); }
+  return parts.join('\n\n');
+}
+
+function submitAIBrief() {
+  var premise = document.getElementById('ai-brief-premise').value.trim();
+  if (!premise) {
+    var ta = document.getElementById('ai-brief-premise');
+    ta.style.borderColor = '#e87060';
+    ta.focus();
+    setTimeout(function(){ ta.style.borderColor = ''; }, 1500);
+    return;
+  }
+
+  var briefData = {
+    premise:      premise,
+    setting:      document.getElementById('ai-brief-setting').value.trim(),
+    tones:        _aiBriefSelectedTones.slice(),
+    count:        document.getElementById('ai-brief-count').value.trim(),
+    characters:   document.getElementById('ai-brief-characters').value.trim(),
+    inspirations: document.getElementById('ai-brief-inspirations').value.trim()
+  };
+
+  var btn = document.getElementById('ai-brief-generate-btn');
+  btn.disabled = true;
+  btn.textContent = 'Generating…';
+  document.getElementById('ai-brief-status').textContent = 'Calling AI…';
+  document.getElementById('ai-brief-error').style.display = 'none';
+
+  fetch(apiSettings.baseUrl + '/chat/completions', {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+      'Authorization': 'Bearer ' + apiSettings.token
+    },
+    body: JSON.stringify({
+      model: apiSettings.model,
+      messages: [
+        { role: 'system', content: AI_PROGRAM_SYSTEM_PROMPT },
+        { role: 'user',   content: buildAIBriefUserMessage(briefData) }
+      ],
+      temperature: 0.85,
+      max_tokens: 4000
+    })
+  })
+  .then(function(resp) {
+    if (!resp.ok) { throw new Error('API error ' + resp.status + ': ' + resp.statusText); }
+    return resp.json();
+  })
+  .then(function(data) {
+    var raw = data.choices && data.choices[0] && data.choices[0].message && data.choices[0].message.content;
+    if (!raw) { throw new Error('No content returned from API.'); }
+    var cleaned = raw.trim().replace(/^```json\s*/i, '').replace(/^```\s*/i, '').replace(/\s*```$/i, '').trim();
+    var generated;
+    try { generated = JSON.parse(cleaned); }
+    catch(e) { throw new Error('Could not parse the generated JSON. Try simplifying your prompt or try again.'); }
+    applyGeneratedProgram(generated, _newProgramParentId);
+  })
+  .catch(function(err) {
+    var errEl = document.getElementById('ai-brief-error');
+    errEl.textContent = err.message || String(err);
+    errEl.style.display = 'block';
+    btn.disabled = false;
+    btn.textContent = 'Generate';
+    document.getElementById('ai-brief-status').textContent = '';
+  });
+}
+
+function applyGeneratedProgram(generated, parentFolderId) {
+  var newId = 'p-' + Date.now();
+  var programName = (typeof generated.name === 'string' && generated.name.trim()) ? generated.name.trim() : 'Generated Program';
+  var newItem = { id: newId, type:'program', name: programName };
+
+  var environments = Array.isArray(generated.environments) ? generated.environments : [];
+  var scenarios    = Array.isArray(generated.scenarios)    ? generated.scenarios    : [];
+  var participants = (generated.participants && typeof generated.participants === 'object') ? generated.participants : {};
+
+  // Add to library so they appear in the library tabs
+  environments.forEach(function(env) {
+    if (!library.environments.find(function(e){ return e.id === env.id; })) {
+      library.environments.push(env);
+    }
+  });
+  scenarios.forEach(function(scen) {
+    if (!library.scenarios.find(function(s){ return s.id === scen.id; })) {
+      library.scenarios.push(scen);
+    }
+  });
+
+  programsStore[newId] = {
+    environments: environments,
+    scenarios:    scenarios,
+    participants: participants,
+    userPersonaId: generated.userPersonaId || null,
+    transcript:   []
+  };
+
+  if (parentFolderId) {
+    var folder = findItem(parentFolderId);
+    if (folder) { folder.children = folder.children || []; folder.children.push(newItem); folder.open = true; }
+  } else {
+    treeData.push(newItem);
+  }
+
+  renderTree();
+  closeAIBrief();
+  switchProgram(newId);
 }
 
 // ─── Create folder ─────────────────────────────────────────────────

@@ -31,6 +31,83 @@
   </div>
 </div>
 
+<!-- ─── New Program Type Dialog ──────────────────────────────────── -->
+<div class="modal-overlay" id="new-program-type-overlay" style="z-index:500;" onclick="closeNewProgramType()"></div>
+<div class="modal-box" id="new-program-type-box" style="width:340px;z-index:501;">
+  <div class="modal-header">
+    <div class="modal-title">New Program</div>
+    <button onclick="closeNewProgramType()" style="color:var(--color-text-secondary);display:flex;align-items:center;padding:2px;">
+      <i class="ti ti-x" style="font-size:15px;"></i>
+    </button>
+  </div>
+  <div class="modal-body" style="padding:14px 18px;display:flex;flex-direction:column;gap:8px;">
+    <button onclick="closeNewProgramType();createProgramManual(_newProgramParentId)" class="program-type-card">
+      <div style="font-size:12px;font-weight:500;color:var(--color-text-primary);margin-bottom:3px;">Manual</div>
+      <div style="font-size:11px;color:var(--color-text-secondary);line-height:1.4;">Start with an empty program and build it yourself.</div>
+    </button>
+    <button onclick="closeNewProgramType();showAIBriefDialog()" class="program-type-card">
+      <div style="font-size:12px;font-weight:500;color:var(--color-text-primary);margin-bottom:3px;">AI Generated</div>
+      <div style="font-size:11px;color:var(--color-text-secondary);line-height:1.4;">Describe your scenario and let the AI create the full program.</div>
+    </button>
+  </div>
+  <div class="modal-footer" style="display:flex;">
+    <div class="modal-footer-note"></div>
+    <button class="btn-ghost" onclick="closeNewProgramType()">Cancel</button>
+  </div>
+</div>
+
+<!-- ─── AI Brief Dialog ────────────────────────────────────────────── -->
+<div class="modal-overlay" id="ai-brief-overlay" style="z-index:500;" onclick="closeAIBrief()"></div>
+<div class="modal-box" id="ai-brief-box" style="z-index:501;">
+  <div class="modal-header">
+    <div>
+      <div class="modal-title">Generate Program</div>
+      <div class="modal-subtitle">Describe your scenario — the AI will create the full program.</div>
+    </div>
+    <button onclick="closeAIBrief()" style="color:var(--color-text-secondary);display:flex;align-items:center;padding:2px;">
+      <i class="ti ti-x" style="font-size:15px;"></i>
+    </button>
+  </div>
+  <div class="modal-body">
+    <div class="form-group">
+      <label class="form-label">Premise</label>
+      <div class="form-hint">Add as much or as little as you like — more detail gives you more control.</div>
+      <textarea id="ai-brief-premise" class="form-input form-textarea" style="min-height:110px;" placeholder="3 characters — a detective named Harlow, her reluctant new partner, and a nervous informant. Harlow is investigating a series of thefts at a high-end gallery that seem connected to a cold case from ten years ago. I want to play Harlow."></textarea>
+    </div>
+    <hr class="form-section-divider">
+    <div class="form-grid-2">
+      <div class="form-group" style="margin-bottom:0;">
+        <label class="form-label">Setting / Genre <span style="font-weight:400;text-transform:none;letter-spacing:0;color:var(--color-text-tertiary);font-size:10px;">optional</span></label>
+        <input type="text" id="ai-brief-setting" class="form-input" placeholder="Space opera, Modern noir…">
+      </div>
+      <div class="form-group" style="margin-bottom:0;">
+        <label class="form-label">Participants <span style="font-weight:400;text-transform:none;letter-spacing:0;color:var(--color-text-tertiary);font-size:10px;">optional</span></label>
+        <input type="number" id="ai-brief-count" class="form-input" placeholder="3" min="2" max="6">
+      </div>
+    </div>
+    <div class="form-group" style="margin-top:14px;">
+      <label class="form-label">Tone <span style="font-weight:400;text-transform:none;letter-spacing:0;color:var(--color-text-tertiary);font-size:10px;">optional</span></label>
+      <div id="ai-brief-tones" style="display:flex;flex-wrap:wrap;gap:6px;margin-top:4px;"></div>
+    </div>
+    <hr class="form-section-divider">
+    <div class="form-group">
+      <label class="form-label">Character Sketches <span style="font-weight:400;text-transform:none;letter-spacing:0;color:var(--color-text-tertiary);font-size:10px;">optional</span></label>
+      <div class="form-hint">Rough descriptions of characters you want — names, archetypes, relationships.</div>
+      <textarea id="ai-brief-characters" class="form-input form-textarea" placeholder="A grizzled veteran, a naive rookie, and a shady informant…"></textarea>
+    </div>
+    <div class="form-group">
+      <label class="form-label">Inspirations <span style="font-weight:400;text-transform:none;letter-spacing:0;color:var(--color-text-tertiary);font-size:10px;">optional</span></label>
+      <input type="text" id="ai-brief-inspirations" class="form-input" placeholder="Like Blade Runner, similar to The Wire…">
+    </div>
+    <div id="ai-brief-error" style="display:none;color:#e87060;font-size:12px;margin-top:2px;padding:10px 12px;background:rgba(232,112,96,0.08);border-radius:6px;border:0.5px solid rgba(232,112,96,0.3);line-height:1.5;"></div>
+  </div>
+  <div class="modal-footer" style="display:flex;">
+    <div class="modal-footer-note" id="ai-brief-status" style="font-style:italic;"></div>
+    <button class="btn-ghost" onclick="closeAIBrief()">Cancel</button>
+    <button class="btn-primary" id="ai-brief-generate-btn" onclick="submitAIBrief()">Generate</button>
+  </div>
+</div>
+
 <!-- ─── Modal Box ─────────────────────────────────────────────────── -->
 <div class="modal-box" id="modal-box">
   <div class="modal-header">
