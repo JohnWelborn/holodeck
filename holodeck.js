@@ -20,7 +20,7 @@ function genId(prefix) { return prefix + '-' + Date.now(); }
 // ═══════════════════════════════════════════════════════════════════
 //  API SETTINGS
 // ═══════════════════════════════════════════════════════════════════
-var apiSettings = { baseUrl: 'http://localhost:1337/v1', model: 'mistral-v7-tekken', token: '' };
+var apiSettings = { baseUrl: 'http://localhost:1337/v1', model: 'mistral-v7-tekken', token: '', censor: true };
 document.getElementById('api-url').value   = apiSettings.baseUrl;
 document.getElementById('api-model').value = apiSettings.model;
 document.getElementById('api-token').value = apiSettings.token;
@@ -64,6 +64,9 @@ var selectedPaletteIndex = 0;
 // ═══════════════════════════════════════════════════════════════════
 var presence     = { JO:true, ST:true, CL:true };
 var isGenerating = false;
+var cyoaMode     = false;
+var autoMode     = false;
+var isSuggesting = false;
 
 // ═══════════════════════════════════════════════════════════════════
 //  PANEL TOGGLES
@@ -845,7 +848,7 @@ function buildPrompt(targetId) {
     'You are currently writing the role of ' + target.displayName + '.',
     'Write only ' + target.displayName + "'s contributions to the scene — their actions, dialogue, and reactions.",
     'Never write for any other character.'
-  ].join('\n');
+  ].join('\n') + censorAddition();
 
   var characterSheet = [
     '## Your Character',
@@ -964,6 +967,11 @@ function createMsgRow(participantId, text, isUserMsg) {
 // ═══════════════════════════════════════════════════════════════════
 //  API HELPERS
 // ═══════════════════════════════════════════════════════════════════
+function censorAddition() {
+  if (!apiSettings.censor) return '';
+  return '\n\nContent policy: This is a PG-13 story. Keep all content appropriate for a general teenage audience. Avoid explicit sexual content, graphic violence or gore, and strong profanity. Romantic and action content is fine but must remain tasteful and non-graphic. Conflict and tension are allowed; gratuitous or exploitative depictions are not.';
+}
+
 function buildHeaders() {
   var h = { 'Content-Type': 'application/json' };
   if (apiSettings.token) h['Authorization'] = 'Bearer ' + apiSettings.token;
@@ -1143,6 +1151,8 @@ async function triggerCharacter(targetId) {
     isGenerating = false;
     setTriggerButtonsDisabled(false);
     console.groupEnd();
+    if (cyoaMode && !autoMode) generateCYOASuggestions();
+    if (autoMode) autoReply();
   }
 }
 
@@ -1365,15 +1375,10 @@ function togglePresence(key) {
 // ═══════════════════════════════════════════════════════════════════
 //  SEND USER MESSAGE
 // ═══════════════════════════════════════════════════════════════════
-function sendMessage() {
-  var input = document.getElementById('msg-input');
-  var text  = input.value.trim();
-  if (!text) return;
-
+function sendText(text) {
   var currentId = programState.userPersonaId;
   var p         = programState.participants[currentId];
   var container = document.getElementById('messages-container');
-
   var result = createMsgRow(currentId, text, true);
   container.appendChild(result.row);
   programState.transcript.push({
@@ -1382,8 +1387,260 @@ function sendMessage() {
     text: text,
     presentCharacters: currentPresentIds()
   });
-  input.value = ''; input.style.height = 'auto';
   container.scrollTop = container.scrollHeight;
+  if (cyoaMode) generateCYOASuggestions();
+}
+
+function sendMessage() {
+  var input = document.getElementById('msg-input');
+  var text  = input.value.trim();
+  if (!text) return;
+  clearSuggestions();
+  sendText(text);
+  input.value = ''; input.style.height = 'auto';
+}
+
+// ═══════════════════════════════════════════════════════════════════
+//  SUGGESTION AREA
+// ═══════════════════════════════════════════════════════════════════
+function clearSuggestions() {
+  var area = document.getElementById('suggestions-area');
+  area.style.display = 'none';
+  area.innerHTML = '';
+}
+
+function renderSuggestions(items) {
+  var area = document.getElementById('suggestions-area');
+  area.innerHTML = '';
+  if (!items || items.length === 0) { clearSuggestions(); return; }
+  items.forEach(function(text, i) {
+    var btn = document.createElement('button');
+    btn.className = 'suggestion-item';
+    btn.textContent = text;
+    btn.dataset.index = String(i);
+    btn.addEventListener('click', function() {
+      var inp = document.getElementById('msg-input');
+      inp.value = ''; inp.style.height = 'auto';
+      clearSuggestions();
+      sendText(text);
+    });
+    btn.addEventListener('keydown', function(e) {
+      var siblings = area.querySelectorAll('.suggestion-item');
+      var idx = parseInt(btn.dataset.index, 10);
+      if (e.key === 'ArrowUp') {
+        e.preventDefault();
+        if (idx > 0) siblings[idx - 1].focus();
+      } else if (e.key === 'ArrowDown') {
+        e.preventDefault();
+        if (idx < siblings.length - 1) {
+          siblings[idx + 1].focus();
+        } else {
+          document.getElementById('msg-input').focus();
+        }
+      } else if (e.key === 'Enter') {
+        e.preventDefault();
+        var inp = document.getElementById('msg-input');
+        inp.value = ''; inp.style.height = 'auto';
+        clearSuggestions();
+        sendText(text);
+      } else if (e.key === 'Escape') {
+        clearSuggestions();
+        document.getElementById('msg-input').focus();
+      }
+    });
+    area.appendChild(btn);
+  });
+  area.style.display = 'flex';
+}
+
+function showSuggestionsLoading(msg) {
+  var area = document.getElementById('suggestions-area');
+  area.innerHTML = '<div style="font-size:12px;color:var(--color-text-tertiary);padding:2px 0;font-style:italic;">' + escHtml(msg) + '</div>';
+  area.style.display = 'flex';
+}
+
+// ═══════════════════════════════════════════════════════════════════
+//  INPUT ASSIST PROMPT BUILDERS
+// ═══════════════════════════════════════════════════════════════════
+function buildUserSuggestionPrompt(targetId, count, draftText) {
+  var target = programState.participants[targetId];
+  if (!target) return null;
+
+  var envText = programState.environments.map(function(e){
+    return e.name + ' — ' + e.description;
+  }).join('\n\n');
+  var scenText = programState.scenarios.map(function(s){
+    return s.name + ' — ' + s.description;
+  }).join('\n\n');
+
+  var stateBlock = '';
+  if (target.traits && target.traits.length > 0) {
+    var stateLines = target.traits.map(function(t){
+      var tname = (typeof t === 'object') ? t.name : t;
+      var tdesc = (typeof t === 'object' && t.description) ? t.description : '';
+      return tdesc ? ('- ' + tname + ' — ' + tdesc) : ('- ' + tname);
+    });
+    stateBlock = '**Current state:**\n' + stateLines.join('\n');
+  }
+
+  var castLines = Object.keys(programState.participants)
+    .filter(function(id){ return id !== targetId; })
+    .map(function(id){
+      var p = programState.participants[id];
+      var perspective = (target.perspectives && target.perspectives[id]) || '';
+      var line = '**' + p.fullName + '** (' + p.role + ') — ' + perspective;
+      if (p.traits && p.traits.length > 0) {
+        var names = p.traits.map(function(t){ return (typeof t === 'object') ? t.name : t; });
+        line += ' *Currently: ' + names.join(', ') + '.*';
+      }
+      return line;
+    });
+
+  var filteredTranscript = programState.transcript.filter(function(msg){
+    if (!msg.presentCharacters) return true;
+    return msg.presentCharacters.indexOf(targetId) !== -1;
+  });
+  var transcriptText = filteredTranscript.map(function(msg){
+    return msg.speakerName + ': ' + msg.text;
+  }).join('\n\n');
+
+  var characterSheet = [
+    '## Your Character',
+    '**Name:** ' + target.fullName,
+    '**Role:** ' + target.role,
+    '**Personality:** ' + target.personality,
+    '**Speech:** ' + target.speech,
+    '**What they know about this scene:** ' + target.knowledge
+  ];
+  if (stateBlock) characterSheet.push(stateBlock);
+
+  var systemPrompt, closingInstruction;
+  if (draftText) {
+    systemPrompt = [
+      'You are helping a user expand a draft message in a collaborative fiction.',
+      'Write a complete, natural in-character version of what they started.',
+      'Return a JSON array containing exactly 1 string.'
+    ].join('\n') + censorAddition();
+    closingInstruction = 'The user has drafted: "' + draftText + '". Expand this into a complete, natural in-character message for ' + target.displayName + '. Return only a JSON array containing exactly 1 string.';
+  } else {
+    systemPrompt = [
+      'You are helping a user decide what to say next in a collaborative fiction.',
+      'Generate varied response options for ' + target.displayName + '.',
+      'Options should be short (1–2 sentences each) and natural.',
+      'Return only a JSON array of strings.'
+    ].join('\n') + censorAddition();
+    closingInstruction = 'Return a JSON array of exactly ' + count + ' short response option' + (count === 1 ? '' : 's') + ' that ' + target.displayName + ' might say next. Return only the JSON array, no other text.';
+  }
+
+  var userMessage = [
+    '## Environment', envText, '',
+    '## Scenario', scenText, '',
+    characterSheet.join('\n'), '',
+    '## The Other Participants', castLines.join('\n'), '',
+    '## Scene Transcript', transcriptText, '',
+    '---',
+    closingInstruction
+  ].join('\n');
+
+  return { systemPrompt: systemPrompt, userMessage: userMessage };
+}
+
+async function callSuggestionApi(prompt, temperature, maxTokens) {
+  var response = await fetch(apiEndpoint(), {
+    method: 'POST', headers: buildHeaders(),
+    body: JSON.stringify({
+      model: apiSettings.model,
+      messages: [
+        { role: 'system', content: prompt.systemPrompt },
+        { role: 'user',   content: prompt.userMessage  }
+      ],
+      temperature: temperature, max_tokens: maxTokens
+    })
+  });
+  if (!response.ok) throw new Error('HTTP ' + response.status);
+  var data = await response.json();
+  var content = data.choices && data.choices[0] && data.choices[0].message && data.choices[0].message.content;
+  if (!content) throw new Error('No content in response');
+  content = content.replace(/^```(?:json)?\n?/i, '').replace(/\n?```$/i, '').trim();
+  return JSON.parse(content);
+}
+
+// ═══════════════════════════════════════════════════════════════════
+//  INPUT ASSIST MODES
+// ═══════════════════════════════════════════════════════════════════
+function toggleCYOAMode() {
+  cyoaMode = !cyoaMode;
+  document.getElementById('cyoa-btn').classList.toggle('mode-btn-active', cyoaMode);
+  if (!cyoaMode) { clearSuggestions(); return; }
+  generateCYOASuggestions();
+}
+
+async function generateCYOASuggestions() {
+  if (isSuggesting || isGenerating) return;
+  var userId = programState.userPersonaId;
+  if (!userId || !programState.participants[userId]) return;
+  isSuggesting = true;
+  showSuggestionsLoading('Thinking…');
+  try {
+    var prompt = buildUserSuggestionPrompt(userId, 3);
+    var items = await callSuggestionApi(prompt, 0.9, 400);
+    if (!Array.isArray(items)) throw new Error('Expected array');
+    renderSuggestions(items.slice(0, 3));
+  } catch (err) {
+    console.error('[Holodeck] CYOA error:', err);
+    clearSuggestions();
+  } finally {
+    isSuggesting = false;
+  }
+}
+
+async function triggerExpand() {
+  var inputEl = document.getElementById('msg-input');
+  var text = inputEl.value.trim();
+  if (!text || isSuggesting || isGenerating) return;
+  var userId = programState.userPersonaId;
+  if (!userId || !programState.participants[userId]) return;
+  isSuggesting = true;
+  showSuggestionsLoading('Expanding…');
+  try {
+    var prompt = buildUserSuggestionPrompt(userId, 1, text);
+    var items = await callSuggestionApi(prompt, 0.8, 300);
+    if (!Array.isArray(items) || items.length === 0) throw new Error('Expected array');
+    renderSuggestions(items.slice(0, 1));
+  } catch (err) {
+    console.error('[Holodeck] Expand error:', err);
+    clearSuggestions();
+  } finally {
+    isSuggesting = false;
+  }
+}
+
+function toggleAutoMode() {
+  autoMode = !autoMode;
+  document.getElementById('auto-btn').classList.toggle('mode-btn-active', autoMode);
+}
+
+async function autoReply() {
+  if (!autoMode || isGenerating || isSuggesting) return;
+  var userId = programState.userPersonaId;
+  if (!userId || !programState.participants[userId]) return;
+  var lastEntry = programState.transcript[programState.transcript.length - 1];
+  if (!lastEntry || lastEntry.participantId === userId) return;
+
+  isGenerating = true;
+  setTriggerButtonsDisabled(true);
+  var replyText = null;
+  try {
+    var prompt = buildUserSuggestionPrompt(userId, 1);
+    var items = await callSuggestionApi(prompt, 0.85, 300);
+    if (Array.isArray(items) && items.length > 0) replyText = items[0];
+  } catch (err) {
+    console.error('[Holodeck] Auto reply error:', err);
+  } finally {
+    isGenerating = false;
+    setTriggerButtonsDisabled(false);
+  }
+  if (replyText) sendText(replyText);
 }
 
 // Backfill seeded transcripts — assume everyone in the participant list was
@@ -1399,6 +1656,11 @@ function backfillTranscriptPresence() {
 var msgInput = document.getElementById('msg-input');
 msgInput.addEventListener('keydown', function(e){
   if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); sendMessage(); }
+  if (e.key === 'ArrowUp') {
+    var area = document.getElementById('suggestions-area');
+    var items = area.querySelectorAll('.suggestion-item');
+    if (items.length > 0) { e.preventDefault(); items[items.length - 1].focus(); }
+  }
 });
 msgInput.addEventListener('input', function(){
   this.style.height = 'auto';
@@ -1662,7 +1924,7 @@ function submitAIBrief() {
     body: JSON.stringify({
       model: apiSettings.model,
       messages: [
-        { role: 'system', content: AI_PROGRAM_SYSTEM_PROMPT },
+        { role: 'system', content: AI_PROGRAM_SYSTEM_PROMPT + censorAddition() },
         { role: 'user',   content: buildAIBriefUserMessage(briefData) }
       ],
       temperature: 0.85,

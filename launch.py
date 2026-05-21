@@ -26,6 +26,7 @@ class Handler(http.server.SimpleHTTPRequestHandler):
             'baseUrl': config.get('base_url'),
             'model':   config.get('model'),
             'token':   config.get('password'),
+            'censor':  config.get('censor'),
         }.items() if v is not None}
 
         if overrides:
@@ -36,6 +37,8 @@ class Handler(http.server.SimpleHTTPRequestHandler):
                 lines.append(f"  apiSettings.model = {json.dumps(overrides['model'])}; document.getElementById('api-model').value = apiSettings.model;")
             if 'token' in overrides:
                 lines.append(f"  apiSettings.token = {json.dumps(overrides['token'])}; document.getElementById('api-token').value = apiSettings.token;")
+            if 'censor' in overrides:
+                lines.append(f"  apiSettings.censor = {json.dumps(bool(overrides['censor']))};")
             inject = '<script>\n' + '\n'.join(lines) + '\n</script>\n'
             content = content.replace('</body>', inject + '</body>', 1)
 

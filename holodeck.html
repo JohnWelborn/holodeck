@@ -192,18 +192,30 @@
       </div>
 
       <!-- Input area -->
-      <div style="border-top:0.5px solid var(--color-border-tertiary);padding:10px 14px;display:flex;align-items:flex-end;gap:9px;flex-shrink:0;">
-        <div id="persona-chip" onclick="cyclePersona()" title="Switch persona" style="display:flex;align-items:center;gap:5px;background:var(--color-background-secondary);border:0.5px solid var(--color-border-tertiary);border-radius:20px;padding:4px 10px 4px 5px;flex-shrink:0;margin-bottom:1px;cursor:pointer;">
-          <div id="chip-avatar" class="av" style="width:22px;height:22px;background:transparent;">
-            <span id="chip-initials" style="font-size:10px;font-weight:500;"></span>
-            <img id="chip-photo" src="" alt="" onerror="this.style.display='none'" style="display:none;">
+      <div style="border-top:0.5px solid var(--color-border-tertiary);flex-shrink:0;">
+        <div id="suggestions-area"></div>
+        <div style="padding:10px 14px;display:flex;align-items:flex-end;gap:9px;">
+          <div id="persona-chip" onclick="cyclePersona()" title="Switch persona" style="display:flex;align-items:center;gap:5px;background:var(--color-background-secondary);border:0.5px solid var(--color-border-tertiary);border-radius:20px;padding:4px 10px 4px 5px;flex-shrink:0;margin-bottom:1px;cursor:pointer;">
+            <div id="chip-avatar" class="av" style="width:22px;height:22px;background:transparent;">
+              <span id="chip-initials" style="font-size:10px;font-weight:500;"></span>
+              <img id="chip-photo" src="" alt="" onerror="this.style.display='none'" style="display:none;">
+            </div>
+            <span id="chip-name" style="font-size:12px;color:var(--color-text-secondary);"></span>
           </div>
-          <span id="chip-name" style="font-size:12px;color:var(--color-text-secondary);"></span>
+          <textarea id="msg-input" rows="1" placeholder=""></textarea>
+          <button onclick="sendMessage()" style="border:0.5px solid var(--color-border-secondary);border-radius:var(--border-radius-md);width:34px;height:34px;display:flex;align-items:center;justify-content:center;color:var(--color-text-secondary);flex-shrink:0;margin-bottom:1px;">
+            <i class="ti ti-send" style="font-size:15px;"></i>
+          </button>
+          <button id="cyoa-btn" onclick="toggleCYOAMode()" title="Choose your own adventure" style="border:0.5px solid var(--color-border-secondary);border-radius:var(--border-radius-md);width:34px;height:34px;display:flex;align-items:center;justify-content:center;color:var(--color-text-secondary);flex-shrink:0;margin-bottom:1px;">
+            <i class="ti ti-messages" style="font-size:15px;"></i>
+          </button>
+          <button id="expand-btn" onclick="triggerExpand()" title="Expand what I've typed" style="border:0.5px solid var(--color-border-secondary);border-radius:var(--border-radius-md);width:34px;height:34px;display:flex;align-items:center;justify-content:center;color:var(--color-text-secondary);flex-shrink:0;margin-bottom:1px;">
+            <i class="ti ti-wand" style="font-size:15px;"></i>
+          </button>
+          <button id="auto-btn" onclick="toggleAutoMode()" title="Auto-reply" style="border:0.5px solid var(--color-border-secondary);border-radius:var(--border-radius-md);width:34px;height:34px;display:flex;align-items:center;justify-content:center;color:var(--color-text-secondary);flex-shrink:0;margin-bottom:1px;">
+            <i class="ti ti-bolt" style="font-size:15px;"></i>
+          </button>
         </div>
-        <textarea id="msg-input" rows="1" placeholder=""></textarea>
-        <button onclick="sendMessage()" style="border:0.5px solid var(--color-border-secondary);border-radius:var(--border-radius-md);width:34px;height:34px;display:flex;align-items:center;justify-content:center;color:var(--color-text-secondary);flex-shrink:0;margin-bottom:1px;">
-          <i class="ti ti-send" style="font-size:15px;"></i>
-        </button>
       </div>
     </div>
 

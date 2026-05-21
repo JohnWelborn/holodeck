@@ -42,6 +42,24 @@
     #msg-input::placeholder { color: var(--color-text-secondary); }
     #msg-input:focus { border-color: var(--color-border-primary); }
 
+    /* ── Suggestion items ── */
+    #suggestions-area { display: none; flex-direction: column; gap: 6px; padding: 8px 14px 0; }
+    .suggestion-item {
+      border: 0.5px solid var(--color-border-secondary);
+      border-radius: var(--border-radius-lg);
+      padding: 8px 12px; font-size: 13px; font-family: var(--font-sans);
+      color: var(--color-text-primary); cursor: pointer; line-height: 1.5;
+      outline: none; background: transparent; text-align: left; width: 100%;
+    }
+    .suggestion-item:hover, .suggestion-item.s-active {
+      background: var(--color-background-secondary);
+      border-color: var(--color-border-primary);
+    }
+    .mode-btn-active {
+      color: var(--color-text-primary) !important;
+      border-color: var(--color-border-primary) !important;
+    }
+
     /* ── Settings panel ── */
     .settings-panel {
       position: absolute; top: 50px; right: 12px; width: 288px;
