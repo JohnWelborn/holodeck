@@ -1923,12 +1923,14 @@ function switchProgram(id) {
   // Rebuild chat messages
   var mc = document.getElementById('messages-container');
   mc.innerHTML = '';
-  programState.transcript.forEach(function(msg) {
+  programState.transcript.forEach(function(msg, idx) {
     var p = programState.participants[msg.participantId];
     if (!p) return;
+    if (!msg.generations) { msg.generations = [msg.text]; msg.currentGenIdx = 0; }
     var isUser = msg.participantId === programState.userPersonaId;
     var result = createMsgRow(msg.participantId, msg.text, isUser);
     mc.appendChild(result.row);
+    wireUpRegenButtons(result, idx);
   });
   mc.scrollTop = mc.scrollHeight;
 
@@ -2350,10 +2352,12 @@ renderArchScenarios();
     document.getElementById('msg-input').placeholder    = 'Type a message as ' + pp.displayName + '...';
   }
   var container = document.getElementById('messages-container');
-  programState.transcript.forEach(function(msg) {
+  programState.transcript.forEach(function(msg, idx) {
+    if (!msg.generations) { msg.generations = [msg.text]; msg.currentGenIdx = 0; }
     var isUser = msg.participantId === programState.userPersonaId;
     var result = createMsgRow(msg.participantId, msg.text, isUser);
     container.appendChild(result.row);
+    wireUpRegenButtons(result, idx);
   });
   container.scrollTop = container.scrollHeight;
 })();
