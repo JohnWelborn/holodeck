@@ -361,7 +361,7 @@
               <span style="font-size:11px;color:var(--color-text-secondary);">Dr. Vasquez</span>
               <div class="msg-actions" style="display:none;align-items:center;gap:6px;"><i class="ti ti-pencil" title="Edit" style="font-size:11px;color:var(--color-text-secondary);cursor:pointer;"></i><i class="ti ti-trash" title="Delete" style="font-size:11px;color:var(--color-text-secondary);cursor:pointer;"></i><i class="ti ti-star" title="Star" style="font-size:11px;color:var(--color-text-secondary);cursor:pointer;"></i><i class="ti ti-git-fork" title="Fork" style="font-size:11px;color:var(--color-text-secondary);cursor:pointer;"></i><span style="width:0.5px;height:10px;background:var(--color-border-secondary);display:inline-block;margin:0 3px;"></span><i class="ti ti-refresh" title="Generate new message" style="font-size:11px;color:var(--color-text-secondary);cursor:pointer;"></i><i class="ti ti-chevron-left" title="Previous generation" style="font-size:10px;color:var(--color-text-secondary);cursor:pointer;"></i><span title="Generation 1 of 1" style="font-size:10px;color:var(--color-text-secondary);cursor:default;user-select:none;white-space:nowrap;">1/1</span><i class="ti ti-chevron-right" title="Next generation" style="font-size:10px;color:var(--color-text-secondary);cursor:pointer;"></i></div>
             </div>
-            <div style="background:var(--color-background-secondary);border-radius:0 10px 10px 10px;padding:8px 12px;font-size:13px;line-height:1.65;display:inline-block;max-width:480px;">Dr. Vasquez glanced at her console, jaw tight. <em>"Decompression is accelerating — we have maybe four minutes before the bridge is uninhabitable. I need someone to manually seal junction 7-Alpha."</em> Her eyes swept the room, waiting for a volunteer.</div>
+            <div style="background:var(--color-background-secondary);border-radius:0 10px 10px 10px;padding:8px 12px;font-size:13px;line-height:1.65;display:inline-block;">Dr. Vasquez glanced at her console, jaw tight. <em>"Decompression is accelerating — we have maybe four minutes before the bridge is uninhabitable. I need someone to manually seal junction 7-Alpha."</em> Her eyes swept the room, waiting for a volunteer.</div>
           </div>
         </div>
 
@@ -1512,7 +1512,7 @@ function createMsgRow(participantId, text, isUserMsg) {
     isUserMsg ? 'border:0.5px solid var(--color-border-secondary);' : '',
     'border-radius:0 10px 10px 10px;',
     'padding:8px 12px;font-size:13px;line-height:1.65;',
-    'display:inline-block;max-width:480px;white-space:pre-wrap;word-break:break-word;'
+    'display:inline-block;white-space:pre-wrap;word-break:break-word;'
   ].join('');
   if (text) bubble.textContent = text;
   content.appendChild(bubble);
