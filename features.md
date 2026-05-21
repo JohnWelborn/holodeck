@@ -64,7 +64,7 @@ Confirm dialog — used for all destructive actions
 ## Message Area
 
 Message row actions (appear on hover):
-- Edit — 🚧 placeholder, no handler
+- Edit — opens an inline textarea pre-filled with the current text; saving pushes a new generation (same as Regenerate), Escape or Cancel closes without changes, Ctrl+Enter saves
 - Delete — 🚧 placeholder, no handler
 - Star — 🚧 placeholder, no handler
 - Fork — 🚧 placeholder, no handler

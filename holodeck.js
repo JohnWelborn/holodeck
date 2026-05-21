@@ -918,7 +918,11 @@ function createMsgRow(participantId, text, isUserMsg) {
   var actions = document.createElement('div');
   actions.className = 'msg-actions';
   actions.style.cssText = 'display:none;align-items:center;gap:6px;';
-  [['ti-pencil','Edit'],['ti-trash','Delete'],['ti-star','Star'],['ti-git-fork','Fork']].forEach(function(ic){
+  var editBtn = document.createElement('i');
+  editBtn.className = 'ti ti-pencil'; editBtn.title = 'Edit';
+  editBtn.style.cssText = 'font-size:11px;color:var(--color-text-secondary);cursor:pointer;';
+  actions.appendChild(editBtn);
+  [['ti-trash','Delete'],['ti-star','Star'],['ti-git-fork','Fork']].forEach(function(ic){
     var i = document.createElement('i');
     i.className = 'ti ' + ic[0]; i.title = ic[1];
     i.style.cssText = 'font-size:11px;color:var(--color-text-secondary);cursor:pointer;';
@@ -962,7 +966,7 @@ function createMsgRow(participantId, text, isUserMsg) {
   content.appendChild(bubble);
   row.appendChild(content);
 
-  return { row: row, bubble: bubble, regenBtn: regenBtn, prevBtn: prevBtn, nextBtn: nextBtn, genCount: genCount };
+  return { row: row, bubble: bubble, editBtn: editBtn, regenBtn: regenBtn, prevBtn: prevBtn, nextBtn: nextBtn, genCount: genCount };
 }
 
 // ═══════════════════════════════════════════════════════════════════
@@ -1174,6 +1178,7 @@ async function streamCompletion(targetId, prompt, bubble, container) {
 
 function wireUpRegenButtons(msgResult, transcriptIdx) {
   var bubble   = msgResult.bubble;
+  var editBtn  = msgResult.editBtn;
   var regenBtn = msgResult.regenBtn;
   var prevBtn  = msgResult.prevBtn;
   var nextBtn  = msgResult.nextBtn;
@@ -1202,6 +1207,10 @@ function wireUpRegenButtons(msgResult, transcriptIdx) {
     refreshNavControls();
   }
 
+  editBtn.addEventListener('click', function() {
+    startInlineEdit(editBtn, bubble, transcriptIdx, refreshNavControls);
+  });
+
   regenBtn.addEventListener('click', function() {
     regenerateMessage(transcriptIdx, msgResult, refreshNavControls);
   });
@@ -1214,6 +1223,98 @@ function wireUpRegenButtons(msgResult, transcriptIdx) {
   nextBtn.addEventListener('click', function() {
     var entry = programState.transcript[transcriptIdx];
     if (entry.currentGenIdx < entry.generations.length - 1) switchTo(entry.currentGenIdx + 1);
+  });
+}
+
+function startInlineEdit(editBtn, bubble, transcriptIdx, refreshNavControls) {
+  if (bubble.nextSibling && bubble.nextSibling._isEditContainer) return;
+
+  var entry = programState.transcript[transcriptIdx];
+  var originalText = entry.generations
+    ? entry.generations[entry.currentGenIdx]
+    : entry.text;
+
+  bubble.style.display = 'none';
+  editBtn.style.opacity = '0.3';
+  editBtn.style.pointerEvents = 'none';
+
+  var container = document.createElement('div');
+  container._isEditContainer = true;
+
+  var ta = document.createElement('textarea');
+  ta.value = originalText;
+  ta.style.cssText = [
+    'display:block;width:100%;',
+    'background:var(--color-background-secondary);',
+    'border:0.5px solid var(--color-border-primary);',
+    'border-radius:0 10px 10px 10px;',
+    'padding:8px 12px;font-size:13px;line-height:1.65;',
+    'font-family:var(--font-sans);color:var(--color-text-primary);',
+    'resize:none;outline:none;overflow:hidden;'
+  ].join('');
+
+  function autoSize() {
+    ta.style.height = 'auto';
+    ta.style.height = ta.scrollHeight + 'px';
+  }
+  ta.addEventListener('input', autoSize);
+
+  var bar = document.createElement('div');
+  bar.style.cssText = 'display:flex;gap:8px;justify-content:flex-end;margin-top:5px;align-items:center;';
+
+  var hint = document.createElement('span');
+  hint.textContent = 'Ctrl+Enter to save · Esc to cancel';
+  hint.style.cssText = 'font-size:10px;color:var(--color-text-tertiary);flex:1;';
+
+  var cancelBtn = document.createElement('button');
+  cancelBtn.textContent = 'Cancel';
+  cancelBtn.style.cssText = 'font-size:11px;color:var(--color-text-secondary);padding:2px 6px;font-family:var(--font-sans);';
+
+  var saveBtn = document.createElement('button');
+  saveBtn.textContent = 'Save';
+  saveBtn.style.cssText = 'font-size:11px;color:#1D9E75;font-weight:500;padding:2px 6px;font-family:var(--font-sans);';
+
+  bar.appendChild(hint);
+  bar.appendChild(cancelBtn);
+  bar.appendChild(saveBtn);
+  container.appendChild(ta);
+  container.appendChild(bar);
+  bubble.parentNode.insertBefore(container, bubble.nextSibling);
+
+  requestAnimationFrame(function() {
+    autoSize();
+    ta.focus();
+    ta.setSelectionRange(ta.value.length, ta.value.length);
+  });
+
+  function doSave() {
+    var newText = ta.value.trim();
+    if (newText && newText !== originalText) {
+      if (!entry.generations) {
+        entry.generations = [entry.text];
+        entry.currentGenIdx = 0;
+      }
+      entry.generations.push(newText);
+      entry.currentGenIdx = entry.generations.length - 1;
+      entry.text = newText;
+      bubble.innerHTML = renderDialogue(newText);
+      refreshNavControls();
+    }
+    doClose();
+  }
+
+  function doClose() {
+    container.remove();
+    bubble.style.display = '';
+    editBtn.style.opacity = '';
+    editBtn.style.pointerEvents = '';
+  }
+
+  saveBtn.addEventListener('click', doSave);
+  cancelBtn.addEventListener('click', doClose);
+  ta.addEventListener('keydown', function(e) {
+    if (e.key === 'Escape') { e.preventDefault(); doClose(); }
+    if (e.key === 'Enter' && (e.ctrlKey || e.metaKey)) { e.preventDefault(); doSave(); }
   });
 }
 
