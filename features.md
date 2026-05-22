@@ -68,7 +68,7 @@ Confirm dialog — used for all destructive actions
 
 Message row actions (appear on hover):
 - Edit — opens an inline textarea pre-filled with the current text; saving pushes a new generation (same as Regenerate), Escape or Cancel closes without changes, Ctrl+Enter saves
-- Delete — 🚧 placeholder, no handler
+- Delete — removes the current generation; if others remain, switches to the previous one; if it was the only generation, removes the message entirely
 - Star — 🚧 placeholder, no handler
 - Fork — 🚧 placeholder, no handler
 - Regenerate — re-calls the LLM with only the transcript up to this message; streams a new variant into the bubble

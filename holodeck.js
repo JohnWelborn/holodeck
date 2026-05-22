@@ -887,6 +887,22 @@ function buildPrompt(targetId, transcriptOverride) {
 }
 
 // ═══════════════════════════════════════════════════════════════════
+//  TRANSCRIPT RENDERING
+// ═══════════════════════════════════════════════════════════════════
+function renderTranscript() {
+  var mc = document.getElementById('messages-container');
+  mc.innerHTML = '';
+  programState.transcript.forEach(function(msg, idx) {
+    if (!msg.generations) { msg.generations = [msg.text]; msg.currentGenIdx = 0; }
+    var isUser = msg.participantId === programState.userPersonaId;
+    var result = createMsgRow(msg.participantId, msg.text, isUser);
+    mc.appendChild(result.row);
+    wireUpRegenButtons(result, idx);
+  });
+  mc.scrollTop = mc.scrollHeight;
+}
+
+// ═══════════════════════════════════════════════════════════════════
 //  MESSAGE ROW FACTORY
 // ═══════════════════════════════════════════════════════════════════
 function createMsgRow(participantId, text, isUserMsg) {
@@ -934,7 +950,11 @@ function createMsgRow(participantId, text, isUserMsg) {
   editBtn.className = 'ti ti-pencil'; editBtn.title = 'Edit';
   editBtn.style.cssText = 'font-size:11px;color:var(--color-text-secondary);cursor:pointer;';
   actions.appendChild(editBtn);
-  [['ti-trash','Delete'],['ti-star','Star'],['ti-git-fork','Fork']].forEach(function(ic){
+  var deleteBtn = document.createElement('i');
+  deleteBtn.className = 'ti ti-trash'; deleteBtn.title = 'Delete';
+  deleteBtn.style.cssText = 'font-size:11px;color:var(--color-text-secondary);cursor:pointer;';
+  actions.appendChild(deleteBtn);
+  [['ti-star','Star'],['ti-git-fork','Fork']].forEach(function(ic){
     var i = document.createElement('i');
     i.className = 'ti ' + ic[0]; i.title = ic[1];
     i.style.cssText = 'font-size:11px;color:var(--color-text-secondary);cursor:pointer;';
@@ -978,7 +998,7 @@ function createMsgRow(participantId, text, isUserMsg) {
   content.appendChild(bubble);
   row.appendChild(content);
 
-  return { row: row, bubble: bubble, editBtn: editBtn, regenBtn: regenBtn, prevBtn: prevBtn, nextBtn: nextBtn, genCount: genCount };
+  return { row: row, bubble: bubble, editBtn: editBtn, deleteBtn: deleteBtn, regenBtn: regenBtn, prevBtn: prevBtn, nextBtn: nextBtn, genCount: genCount };
 }
 
 // ═══════════════════════════════════════════════════════════════════
@@ -1190,12 +1210,13 @@ async function streamCompletion(targetId, prompt, bubble, container) {
 }
 
 function wireUpRegenButtons(msgResult, transcriptIdx) {
-  var bubble   = msgResult.bubble;
-  var editBtn  = msgResult.editBtn;
-  var regenBtn = msgResult.regenBtn;
-  var prevBtn  = msgResult.prevBtn;
-  var nextBtn  = msgResult.nextBtn;
-  var genCount = msgResult.genCount;
+  var bubble     = msgResult.bubble;
+  var editBtn    = msgResult.editBtn;
+  var deleteBtn  = msgResult.deleteBtn;
+  var regenBtn   = msgResult.regenBtn;
+  var prevBtn    = msgResult.prevBtn;
+  var nextBtn    = msgResult.nextBtn;
+  var genCount   = msgResult.genCount;
 
   function refreshNavControls() {
     var entry = programState.transcript[transcriptIdx];
@@ -1209,6 +1230,10 @@ function wireUpRegenButtons(msgResult, transcriptIdx) {
       genCount.title = 'Generation ' + (i + 1) + ' of ' + n;
       prevBtn.style.opacity = i === 0 ? '0.3' : '1';
       nextBtn.style.opacity = i === n - 1 ? '0.3' : '1';
+    } else {
+      prevBtn.style.display  = 'none';
+      genCount.style.display = 'none';
+      nextBtn.style.display  = 'none';
     }
   }
 
@@ -1223,6 +1248,22 @@ function wireUpRegenButtons(msgResult, transcriptIdx) {
 
   editBtn.addEventListener('click', function() {
     startInlineEdit(editBtn, bubble, transcriptIdx, refreshNavControls);
+  });
+
+  deleteBtn.addEventListener('click', function() {
+    var entry = programState.transcript[transcriptIdx];
+    entry.generations.splice(entry.currentGenIdx, 1);
+    if (entry.generations.length === 0) {
+      programState.transcript.splice(transcriptIdx, 1);
+      renderTranscript();
+    } else {
+      var newIdx = Math.max(0, entry.currentGenIdx - 1);
+      entry.currentGenIdx = newIdx;
+      entry.text = entry.generations[newIdx];
+      bubble.innerHTML = renderDialogue(entry.text);
+      refreshNavControls();
+    }
+    scheduleSave();
   });
 
   regenBtn.addEventListener('click', function() {
@@ -1942,18 +1983,7 @@ function switchProgram(id) {
   }
 
   // Rebuild chat messages
-  var mc = document.getElementById('messages-container');
-  mc.innerHTML = '';
-  programState.transcript.forEach(function(msg, idx) {
-    var p = programState.participants[msg.participantId];
-    if (!p) return;
-    if (!msg.generations) { msg.generations = [msg.text]; msg.currentGenIdx = 0; }
-    var isUser = msg.participantId === programState.userPersonaId;
-    var result = createMsgRow(msg.participantId, msg.text, isUser);
-    mc.appendChild(result.row);
-    wireUpRegenButtons(result, idx);
-  });
-  mc.scrollTop = mc.scrollHeight;
+  renderTranscript();
 
   renderTree();
   scheduleSave();
@@ -2509,13 +2539,5 @@ renderArchScenarios();
     document.getElementById('chip-name').textContent    = pp.displayName;
     document.getElementById('msg-input').placeholder    = 'Type a message as ' + pp.displayName + '...';
   }
-  var container = document.getElementById('messages-container');
-  programState.transcript.forEach(function(msg, idx) {
-    if (!msg.generations) { msg.generations = [msg.text]; msg.currentGenIdx = 0; }
-    var isUser = msg.participantId === programState.userPersonaId;
-    var result = createMsgRow(msg.participantId, msg.text, isUser);
-    container.appendChild(result.row);
-    wireUpRegenButtons(result, idx);
-  });
-  container.scrollTop = container.scrollHeight;
+  renderTranscript();
 })();
