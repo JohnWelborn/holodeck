@@ -2478,7 +2478,8 @@ function exportData() {
     library: library,
     programsStore: programsStore,
     treeData: treeData,
-    apiSettings: { baseUrl: apiSettings.baseUrl, model: apiSettings.model, censor: apiSettings.censor }
+    apiSettings: { baseUrl: apiSettings.baseUrl, model: apiSettings.model, censor: apiSettings.censor },
+    activeProgramId: activeProgramId
   };
   var blob = new Blob([JSON.stringify(payload, null, 2)], { type: 'application/json' });
   var a = document.createElement('a');
