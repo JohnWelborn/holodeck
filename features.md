@@ -20,6 +20,9 @@
 - API token — password field, live input
 - Test Connection — fires a real request and reports success/failure in the status bar
 - PG-13 censor — toggle that appends a content restriction instruction to every system prompt
+- Export to file — downloads a JSON snapshot of all programs, library, and settings (token excluded)
+- Import from file — restores from an exported file; keeps current API token, then reloads
+- Reset to defaults — clears all saved data and reloads with defaults; API settings are preserved
 
 ---
 

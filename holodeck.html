@@ -170,6 +170,11 @@
     </div>
     <button id="test-connection-btn" onclick="testConnection()" class="btn-primary" style="width:100%;padding:6px 12px;font-size:12px;margin-top:2px;">Test Connection</button>
     <div class="api-status" id="api-status" style="color:var(--color-text-tertiary);"></div>
+    <div style="margin-top:14px;padding-top:12px;border-top:0.5px solid var(--color-border-tertiary);display:flex;flex-direction:column;gap:6px;">
+      <button onclick="exportData()" class="btn-ghost" style="width:100%;padding:6px 12px;font-size:12px;text-align:left;">Export to file</button>
+      <button onclick="importData()" class="btn-ghost" style="width:100%;padding:6px 12px;font-size:12px;text-align:left;">Import from file</button>
+      <button onclick="clearStorage()" class="btn-ghost" style="width:100%;padding:6px 12px;font-size:12px;text-align:left;color:var(--color-text-tertiary);">Reset to defaults</button>
+    </div>
   </div>
 
   <div style="flex:1;display:flex;overflow:hidden;">

@@ -28,6 +28,7 @@ function updateApiSettings() {
   apiSettings.baseUrl = document.getElementById('api-url').value.trim() || 'http://localhost:1337/v1';
   apiSettings.model   = document.getElementById('api-model').value.trim() || 'mistral-v7-tekken';
   apiSettings.token   = document.getElementById('api-token').value.trim();
+  scheduleSave();
 }
 var settingsOpen = false;
 function toggleSettings() {
@@ -516,6 +517,7 @@ function saveEnv() {
   }
   renderArchEnvironments();
   closeModal();
+  scheduleSave();
 }
 
 function saveScen() {
@@ -535,6 +537,7 @@ function saveScen() {
   }
   renderArchScenarios();
   closeModal();
+  scheduleSave();
 }
 
 function saveParticipant() {
@@ -582,6 +585,7 @@ function saveParticipant() {
 
   renderParticipants();
   closeModal();
+  scheduleSave();
 }
 
 // ─── Trait modal ──────────────────────────────────────────────────
@@ -606,6 +610,7 @@ function addTraitFromLibrary(traitObj) {
   if (p.traits.some(function(t){ return t.id === traitObj.id; })) return;
   p.traits.push({ id: traitObj.id, name: traitObj.name, description: traitObj.description });
   renderParticipants();
+  scheduleSave();
   // Refresh library view so button updates to "Added"
   var body = document.getElementById('modal-body');
   body.innerHTML = '';
@@ -653,6 +658,7 @@ function saveTrait() {
     });
     renderParticipants();
     closeModal();
+    scheduleSave();
   } else {
     var newTrait = { id: genId('trait'), name: name, description: desc };
     library.traits.push(newTrait);
@@ -664,6 +670,7 @@ function saveTrait() {
     }
     renderParticipants();
     closeModal();
+    scheduleSave();
   }
 }
 
@@ -672,6 +679,7 @@ function removeTrait(participantId, traitIndex) {
   if (!p || !p.traits) return;
   p.traits.splice(traitIndex, 1);
   renderParticipants();
+  scheduleSave();
 }
 
 
@@ -689,6 +697,7 @@ function addEnvToScene(envObj) {
   if (!isEnvInScene(envObj.id)) {
     programState.environments.push(Object.assign({}, envObj));
     renderArchEnvironments();
+    scheduleSave();
     var body = document.getElementById('modal-body');
     body.innerHTML = '';
     renderLibraryTab(body);
@@ -698,6 +707,7 @@ function addScenToScene(scenObj) {
   if (!isScenInScene(scenObj.id)) {
     programState.scenarios.push(Object.assign({}, scenObj));
     renderArchScenarios();
+    scheduleSave();
     var body = document.getElementById('modal-body');
     body.innerHTML = '';
     renderLibraryTab(body);
@@ -708,10 +718,12 @@ function addScenToScene(scenObj) {
 function removeEnvFromScene(id) {
   programState.environments = programState.environments.filter(function(e){ return e.id!==id; });
   renderArchEnvironments();
+  scheduleSave();
 }
 function removeScenFromScene(id) {
   programState.scenarios = programState.scenarios.filter(function(s){ return s.id!==id; });
   renderArchScenarios();
+  scheduleSave();
 }
 
 // ═══════════════════════════════════════════════════════════════════
@@ -1083,6 +1095,7 @@ async function triggerCharacter(targetId) {
   } finally {
     isGenerating = false;
     setTriggerButtonsDisabled(false);
+    scheduleSave();
     if (cyoaMode && !autoMode) generateCYOASuggestions();
     if (autoMode) autoReply();
   }
@@ -1205,6 +1218,7 @@ function wireUpRegenButtons(msgResult, transcriptIdx) {
     entry.text = entry.generations[idx];
     bubble.innerHTML = renderDialogue(entry.generations[idx]);
     refreshNavControls();
+    scheduleSave();
   }
 
   editBtn.addEventListener('click', function() {
@@ -1299,6 +1313,7 @@ function startInlineEdit(editBtn, bubble, transcriptIdx, refreshNavControls) {
       entry.text = newText;
       bubble.innerHTML = renderDialogue(newText);
       refreshNavControls();
+      scheduleSave();
     }
     doClose();
   }
@@ -1349,6 +1364,7 @@ async function regenerateMessage(transcriptIdx, msgResult, refreshNavControls) {
   } finally {
     isGenerating = false;
     setTriggerButtonsDisabled(false);
+    scheduleSave();
   }
 }
 
@@ -1522,6 +1538,7 @@ function deleteParticipant(id) {
   delete programState.participants[id];
   delete presence[id];
   renderParticipants();
+  scheduleSave();
 }
 
 // ═══════════════════════════════════════════════════════════════════
@@ -1546,6 +1563,7 @@ function switchPersona(key) {
   });
 
   renderParticipants();
+  scheduleSave();
 }
 
 function cyclePersona() {
@@ -1566,6 +1584,7 @@ function togglePresence(key) {
   var c = document.getElementById('messages-container');
   c.appendChild(sys); c.scrollTop = c.scrollHeight;
   renderParticipants();
+  scheduleSave();
 }
 
 // ═══════════════════════════════════════════════════════════════════
@@ -1587,6 +1606,7 @@ function sendText(text) {
   });
   wireUpRegenButtons(result, programState.transcript.length - 1);
   container.scrollTop = container.scrollHeight;
+  scheduleSave();
   if (cyoaMode) generateCYOASuggestions();
 }
 
@@ -1872,6 +1892,7 @@ var draggedId = null;
 
 // ─── Switch program ────────────────────────────────────────────────
 function switchProgram(id) {
+  syncProgramStateToStore();
   var data = programsStore[id];
   if (!data) {
     // New/empty program — blank state
@@ -1935,6 +1956,7 @@ function switchProgram(id) {
   mc.scrollTop = mc.scrollHeight;
 
   renderTree();
+  scheduleSave();
 }
 
 // ─── Create program ────────────────────────────────────────────────
@@ -2207,6 +2229,7 @@ function createFolder(parentFolderId) {
     treeData.push(newItem);
   }
   renderTree();
+  scheduleSave();
   startRename(newId);
 }
 
@@ -2228,6 +2251,7 @@ function startRename(id) {
     item.name = val;
     if (programsStore[id]) programsStore[id].name = val;
     renderTree();
+    scheduleSave();
   }
   input.addEventListener('blur',  commit);
   input.addEventListener('keydown', function(e) {
@@ -2254,9 +2278,11 @@ function deleteProgram(id) {
       renderParticipants(); renderArchEnvironments(); renderArchScenarios();
       document.getElementById('messages-container').innerHTML = '';
       renderTree();
+      scheduleSave();
     }
   } else {
     renderTree();
+    scheduleSave();
   }
 }
 
@@ -2287,7 +2313,7 @@ function renderLevel(items,container,depth){
         df.title='Delete folder';
         df.addEventListener('click',function(e){
           e.stopPropagation();
-          showConfirm('Delete folder', 'Delete folder "' + item.name + '"?', function(){ removeItem(item.id); renderTree(); });
+          showConfirm('Delete folder', 'Delete folder "' + item.name + '"?', function(){ removeItem(item.id); renderTree(); scheduleSave(); });
         });
         el.appendChild(df);
       }
@@ -2322,7 +2348,7 @@ function renderLevel(items,container,depth){
     el.addEventListener('dragstart',function(e){draggedId=this.dataset.id;e.dataTransfer.effectAllowed='move';e.dataTransfer.setData('text/plain',draggedId);var s=this;setTimeout(function(){s.style.opacity='0.35';},0);});
     el.addEventListener('dragover',function(e){e.preventDefault();e.stopPropagation();if(this.dataset.id===draggedId||isAncestor(draggedId,this.dataset.id))return;clearIndicators();var rect=this.getBoundingClientRect(),y=e.clientY-rect.top,h=rect.height,isF=this.dataset.type==='folder';if(isF&&y>h*0.28&&y<h*0.72){this.style.outline='1.5px solid #1D9E75';this.style.borderRadius='3px';this._dp='into';}else if(y<=h*0.5){this.querySelector('.drop-line.top').style.display='block';this._dp='before';}else{this.querySelector('.drop-line.bottom').style.display='block';this._dp='after';}});
     el.addEventListener('dragleave',function(e){if(!this.contains(e.relatedTarget)){this.style.outline='';this.style.borderRadius='';var t=this.querySelector('.drop-line.top'),b=this.querySelector('.drop-line.bottom');if(t)t.style.display='none';if(b)b.style.display='none';}});
-    el.addEventListener('drop',function(e){e.preventDefault();e.stopPropagation();var tid=this.dataset.id,pos=this._dp||'after';if(tid===draggedId||isAncestor(draggedId,tid))return;clearIndicators();var moved=removeItem(draggedId);if(moved){insertItem(moved,tid,pos);renderTree();}});
+    el.addEventListener('drop',function(e){e.preventDefault();e.stopPropagation();var tid=this.dataset.id,pos=this._dp||'after';if(tid===draggedId||isAncestor(draggedId,tid))return;clearIndicators();var moved=removeItem(draggedId);if(moved){insertItem(moved,tid,pos);renderTree();scheduleSave();}});
     el.addEventListener('dragend',function(){clearIndicators();draggedId=null;renderTree();});
     container.appendChild(el);
     if(item.type==='folder'&&item.open&&item.children)renderLevel(item.children,container,depth+1);
@@ -2331,8 +2357,140 @@ function renderLevel(items,container,depth){
 
 
 // ═══════════════════════════════════════════════════════════════════
+//  PERSISTENCE
+// ═══════════════════════════════════════════════════════════════════
+function syncProgramStateToStore() {
+  if (!activeProgramId || !programsStore[activeProgramId]) return;
+  programsStore[activeProgramId].environments  = programState.environments;
+  programsStore[activeProgramId].scenarios     = programState.scenarios;
+  programsStore[activeProgramId].participants  = programState.participants;
+  programsStore[activeProgramId].userPersonaId = programState.userPersonaId;
+  programsStore[activeProgramId].transcript    = programState.transcript;
+}
+
+function saveToStorage() {
+  syncProgramStateToStore();
+  try {
+    localStorage.setItem('holodeck_v1', JSON.stringify({
+      library: library,
+      programsStore: programsStore,
+      treeData: treeData,
+      apiSettings: apiSettings,
+      activeProgramId: activeProgramId
+    }));
+  } catch(e) {
+    console.warn('[Holodeck] localStorage save failed:', e);
+  }
+}
+
+var _saveTimer = null;
+function scheduleSave() {
+  if (_saveTimer) clearTimeout(_saveTimer);
+  _saveTimer = setTimeout(saveToStorage, 500);
+}
+
+function loadFromStorage() {
+  try {
+    var apiBackup = localStorage.getItem('holodeck_api');
+    if (apiBackup) {
+      Object.assign(apiSettings, JSON.parse(apiBackup));
+      localStorage.removeItem('holodeck_api');
+      document.getElementById('api-url').value   = apiSettings.baseUrl;
+      document.getElementById('api-model').value = apiSettings.model;
+      document.getElementById('api-token').value = apiSettings.token;
+    }
+    var raw = localStorage.getItem('holodeck_v1');
+    if (!raw) return;
+    var saved = JSON.parse(raw);
+    if (saved.library) {
+      if (saved.library.environments) library.environments = saved.library.environments;
+      if (saved.library.scenarios)    library.scenarios    = saved.library.scenarios;
+      if (saved.library.traits)       library.traits       = saved.library.traits;
+    }
+    if (saved.programsStore) Object.assign(programsStore, saved.programsStore);
+    if (saved.treeData) {
+      treeData.splice(0, treeData.length);
+      saved.treeData.forEach(function(i){ treeData.push(i); });
+    }
+    if (saved.apiSettings) {
+      Object.assign(apiSettings, saved.apiSettings);
+      document.getElementById('api-url').value   = apiSettings.baseUrl;
+      document.getElementById('api-model').value = apiSettings.model;
+      document.getElementById('api-token').value = apiSettings.token;
+    }
+    if (saved.activeProgramId && programsStore[saved.activeProgramId]) {
+      activeProgramId = saved.activeProgramId;
+      var d = programsStore[activeProgramId];
+      programState.environments  = JSON.parse(JSON.stringify(d.environments  || []));
+      programState.scenarios     = JSON.parse(JSON.stringify(d.scenarios     || []));
+      programState.participants  = JSON.parse(JSON.stringify(d.participants  || {}));
+      programState.userPersonaId = d.userPersonaId || null;
+      programState.transcript    = JSON.parse(JSON.stringify(d.transcript    || []));
+      presence = {};
+      Object.keys(programState.participants).forEach(function(k){ presence[k] = true; });
+    }
+  } catch(e) {
+    console.warn('[Holodeck] localStorage load failed:', e);
+  }
+}
+
+function clearStorage() {
+  showConfirm('Reset to defaults', 'Reset everything to defaults? All programs and transcript history will be lost. API settings will be kept.', function() {
+    localStorage.setItem('holodeck_api', JSON.stringify(apiSettings));
+    localStorage.removeItem('holodeck_v1');
+    location.reload();
+  });
+}
+
+function exportData() {
+  syncProgramStateToStore();
+  var payload = {
+    library: library,
+    programsStore: programsStore,
+    treeData: treeData,
+    apiSettings: { baseUrl: apiSettings.baseUrl, model: apiSettings.model, censor: apiSettings.censor }
+  };
+  var blob = new Blob([JSON.stringify(payload, null, 2)], { type: 'application/json' });
+  var a = document.createElement('a');
+  a.href = URL.createObjectURL(blob);
+  a.download = 'holodeck-' + new Date().toISOString().slice(0, 10) + '.json';
+  a.click();
+  URL.revokeObjectURL(a.href);
+}
+
+function importData() {
+  var input = document.createElement('input');
+  input.type = 'file'; input.accept = '.json,application/json';
+  input.onchange = function() {
+    var file = input.files[0];
+    if (!file) return;
+    var reader = new FileReader();
+    reader.onload = function(e) {
+      try {
+        var data = JSON.parse(e.target.result);
+        if (!data.programsStore || !data.treeData) throw new Error('Invalid holodeck file.');
+        var mergedApi = Object.assign({}, data.apiSettings || {}, { token: apiSettings.token });
+        localStorage.setItem('holodeck_v1', JSON.stringify({
+          library: data.library || { environments: [], scenarios: [], traits: [] },
+          programsStore: data.programsStore,
+          treeData: data.treeData,
+          apiSettings: mergedApi,
+          activeProgramId: data.activeProgramId || null
+        }));
+        location.reload();
+      } catch(err) {
+        alert('Import failed: ' + err.message);
+      }
+    };
+    reader.readAsText(file);
+  };
+  input.click();
+}
+
+// ═══════════════════════════════════════════════════════════════════
 //  INIT
 // ═══════════════════════════════════════════════════════════════════
+loadFromStorage();
 backfillTranscriptPresence();
 renderTree();
 renderParticipants();
