@@ -1,10 +1,9 @@
 # TODO
 
+
+Need to have logic or LLM call to determine who talks next.
+
 need to test save file loading
-
-## Significant gaps
-
-**~~Delete message~~** ✅ Fixed.
 
 **No context length management.** As a roleplay runs long, the full transcript gets sent to the model every turn. Eventually it hits the model's context limit and starts failing or truncating. No way to summarize older exchanges, set a rolling window, or pin certain messages as always-include.
 
