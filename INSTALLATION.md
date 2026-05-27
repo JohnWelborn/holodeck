@@ -20,6 +20,17 @@ curl -L -o Mistral-Small-24B-Instruct-2501-Q8_0.gguf \
 
 Download a pre-built release from the [llama.cpp releases page](https://github.com/ggml-org/llama.cpp/releases).
 
+For Windows with an NVIDIA GPU, download both of these from the same release and extract them into the same folder:
+
+- `llama-b9351-bin-win-cuda-13.1-x64.zip` — the server binary
+- `cudart-llama-bin-win-cuda-13.1-x64.zip` — the CUDA runtime DLLs (required for GPU support)
+
+The CUDA runtime DLLs must be in the same directory as the executable. You can verify GPU detection with:
+
+```
+llama-server.exe --list-devices
+```
+
 Run `llama-server` (or `llama-server.exe` on Windows) from the extracted directory:
 
 ```bash

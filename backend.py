@@ -13,6 +13,8 @@ model_settings = [ModelSettings(
     model=config['model_path'],
     n_gpu_layers=-1,
     n_ctx=32768,
+    use_mlock=False,
+    logits_all=False,
 )]
 
 settings = ServerSettings(
