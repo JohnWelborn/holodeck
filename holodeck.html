@@ -234,6 +234,18 @@
       </div>
       <div style="flex:1;padding:12px;display:flex;flex-direction:column;gap:16px;overflow-y:auto;">
 
+        <!-- Direction — JS-rendered, collapsible -->
+        <div>
+          <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:6px;cursor:pointer;" onclick="toggleDirection()">
+            <span style="font-size:10px;font-weight:500;color:var(--color-text-secondary);letter-spacing:0.5px;text-transform:uppercase;">Direction</span>
+            <i id="direction-chevron" class="ti ti-chevron-right" style="font-size:12px;color:var(--color-text-secondary);transition:transform 0.15s;"></i>
+          </div>
+          <div id="arch-direction-content" style="display:none;">
+            <div id="arch-direction"></div>
+            <div id="arch-closing"></div>
+          </div>
+        </div>
+
         <!-- Environment — JS-rendered -->
         <div>
           <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:6px;">

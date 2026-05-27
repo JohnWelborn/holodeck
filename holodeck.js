@@ -103,7 +103,8 @@ function openModal(type, editId) {
   document.getElementById('modal-overlay').classList.add('open');
   document.getElementById('modal-box').classList.add('open');
 
-  var titles = { env:'Environments', scen:'Scenarios', participant:'Participants', trait:'Traits' };
+  if (type === 'direction' || type === 'closing') currentModalTab = 'new';
+  var titles = { env:'Environments', scen:'Scenarios', participant:'Participants', trait:'Traits', direction:'Direction', closing:'Direction' };
   document.getElementById('modal-title').textContent = titles[type] || '';
   document.getElementById('modal-subtitle').textContent = editId ? 'Editing' : '';
 
@@ -158,15 +159,24 @@ function renderModalContent() {
     renderLibraryTab(body);
     footer.style.display = 'none';
   } else {
-    // Show a back-arrow in the subtitle area when not editing
-    document.getElementById('modal-subtitle').innerHTML = editingItemId
-      ? 'Editing'
-      : '<button onclick="switchToLibrary()" style="display:inline-flex;align-items:center;gap:3px;font-size:11px;color:var(--color-text-secondary);background:none;border:none;cursor:pointer;padding:0;" onmouseenter="this.style.color=\'var(--color-text-primary)\'" onmouseleave="this.style.color=\'var(--color-text-secondary)\'"><i class="ti ti-arrow-left" style="font-size:11px;"></i> Back to library</button>';
+    if (currentModal === 'direction') {
+      document.getElementById('modal-subtitle').textContent = 'Character System Prompt';
+    } else if (currentModal === 'closing') {
+      document.getElementById('modal-subtitle').textContent = 'Closing Instruction';
+    } else {
+      // Show a back-arrow in the subtitle area when not editing
+      document.getElementById('modal-subtitle').innerHTML = editingItemId
+        ? 'Editing'
+        : '<button onclick="switchToLibrary()" style="display:inline-flex;align-items:center;gap:3px;font-size:11px;color:var(--color-text-secondary);background:none;border:none;cursor:pointer;padding:0;" onmouseenter="this.style.color=\'var(--color-text-primary)\'" onmouseleave="this.style.color=\'var(--color-text-secondary)\'"><i class="ti ti-arrow-left" style="font-size:11px;"></i> Back to library</button>';
+    }
     renderFormTab(body);
     footer.style.display = 'flex';
     var saveBtn = document.getElementById('modal-save-btn');
     var noteEl  = document.getElementById('modal-footer-note');
-    if (editingItemId) {
+    if (currentModal === 'direction' || currentModal === 'closing') {
+      saveBtn.textContent = 'Save';
+      noteEl.textContent  = '';
+    } else if (editingItemId) {
       saveBtn.textContent = 'Update';
       noteEl.textContent  = '';
     } else if (currentModal === 'trait') {
@@ -357,6 +367,8 @@ function renderFormTab(container) {
   else if (currentModal === 'scen')        renderScenForm(container);
   else if (currentModal === 'participant') renderParticipantForm(container);
   else if (currentModal === 'trait')       renderTraitForm(container);
+  else if (currentModal === 'direction')   renderDirectionForm(container);
+  else if (currentModal === 'closing')     renderClosingForm(container);
 }
 
 function renderEnvForm(container) {
@@ -507,6 +519,8 @@ function saveModalForm() {
   else if (currentModal === 'scen')        saveScen();
   else if (currentModal === 'participant') saveParticipant();
   else if (currentModal === 'trait')       saveTrait();
+  else if (currentModal === 'direction')   saveDirection();
+  else if (currentModal === 'closing')     saveClosing();
 }
 
 function saveEnv() {
@@ -685,6 +699,43 @@ function saveTrait() {
   }
 }
 
+function renderDirectionForm(container) {
+  container.innerHTML = [
+    '<div class="form-group">',
+    '  <p class="form-hint">Sent to the LLM before every character turn. Use <code>{name}</code> where the character\'s display name should appear.</p>',
+    '  <textarea class="form-input form-textarea" id="f-direction" style="min-height:160px;font-family:inherit;font-size:12px;"></textarea>',
+    '</div>'
+  ].join('');
+  document.getElementById('f-direction').value = programState.systemPromptBase || DEFAULT_DIRECTION;
+  setTimeout(function(){ var el = document.getElementById('f-direction'); if (el) el.focus(); }, 40);
+}
+
+function saveDirection() {
+  var val = (document.getElementById('f-direction').value || '').trim();
+  programState.systemPromptBase = val || DEFAULT_DIRECTION;
+  renderArchDirection();
+  closeModal();
+  scheduleSave();
+}
+
+function renderClosingForm(container) {
+  container.innerHTML = [
+    '<div class="form-group">',
+    '  <p class="form-hint">The final line of the user turn, telling the LLM what to write. Use <code>{name}</code> where the character\'s name should appear.</p>',
+    '  <textarea class="form-input form-textarea" id="f-closing" style="min-height:100px;font-family:inherit;font-size:12px;"></textarea>',
+    '</div>'
+  ].join('');
+  document.getElementById('f-closing').value = programState.closingInstruction || DEFAULT_CLOSING;
+  setTimeout(function(){ var el = document.getElementById('f-closing'); if (el) el.focus(); }, 40);
+}
+
+function saveClosing() {
+  var val = (document.getElementById('f-closing').value || '').trim();
+  programState.closingInstruction = val || DEFAULT_CLOSING;
+  closeModal();
+  scheduleSave();
+}
+
 function removeTrait(participantId, traitIndex) {
   var p = programState.participants[participantId];
   if (!p || !p.traits) return;
@@ -738,8 +789,69 @@ function removeScenFromScene(id) {
 }
 
 // ═══════════════════════════════════════════════════════════════════
-//  ARCH RENDERING — Environments & Scenarios
+//  ARCH RENDERING — Direction, Environments & Scenarios
 // ═══════════════════════════════════════════════════════════════════
+var directionExpanded = false;
+
+function toggleDirection() {
+  directionExpanded = !directionExpanded;
+  document.getElementById('arch-direction-content').style.display = directionExpanded ? '' : 'none';
+  document.getElementById('direction-chevron').style.transform = directionExpanded ? 'rotate(90deg)' : '';
+}
+
+function renderArchDirection() {
+  var container = document.getElementById('arch-direction');
+  if (!container) return;
+  container.innerHTML = '';
+
+  var template = programState.systemPromptBase || DEFAULT_DIRECTION;
+  var item = document.createElement('div');
+  item.className = 'arch-item';
+  item.style.cssText = 'display:flex;align-items:center;padding:5px 7px;border-radius:var(--border-radius-md);background:var(--color-background-primary);border:0.5px solid var(--color-border-tertiary);margin-bottom:3px;min-width:0;cursor:pointer;';
+  item.onclick = function() { openModal('direction'); };
+
+  var nameEl = document.createElement('span');
+  nameEl.className = 'arch-item-name';
+  nameEl.style.cssText = 'font-size:12px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;flex:1;';
+  nameEl.textContent = 'System prompt';
+  item.appendChild(nameEl);
+
+  var editBtn = document.createElement('button');
+  editBtn.title = 'Edit direction';
+  editBtn.style.cssText = 'color:var(--color-text-secondary);display:flex;align-items:center;padding:1px;border-radius:4px;flex-shrink:0;';
+  editBtn.innerHTML = '<i class="ti ti-pencil" style="font-size:11px;"></i>';
+  editBtn.onclick = function(e) { e.stopPropagation(); openModal('direction'); };
+  item.appendChild(editBtn);
+
+  container.appendChild(item);
+}
+
+function renderArchClosingInstruction() {
+  var container = document.getElementById('arch-closing');
+  if (!container) return;
+  container.innerHTML = '';
+
+  var item = document.createElement('div');
+  item.className = 'arch-item';
+  item.style.cssText = 'display:flex;align-items:center;padding:5px 7px;border-radius:var(--border-radius-md);background:var(--color-background-primary);border:0.5px solid var(--color-border-tertiary);margin-bottom:3px;min-width:0;cursor:pointer;';
+  item.onclick = function() { openModal('closing'); };
+
+  var nameEl = document.createElement('span');
+  nameEl.className = 'arch-item-name';
+  nameEl.style.cssText = 'font-size:12px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;flex:1;';
+  nameEl.textContent = 'Closing instruction';
+  item.appendChild(nameEl);
+
+  var editBtn = document.createElement('button');
+  editBtn.title = 'Edit closing instruction';
+  editBtn.style.cssText = 'color:var(--color-text-secondary);display:flex;align-items:center;padding:1px;border-radius:4px;flex-shrink:0;';
+  editBtn.innerHTML = '<i class="ti ti-pencil" style="font-size:11px;"></i>';
+  editBtn.onclick = function(e) { e.stopPropagation(); openModal('closing'); };
+  item.appendChild(editBtn);
+
+  container.appendChild(item);
+}
+
 function renderArchEnvironments() {
   var container = document.getElementById('arch-environments');
   container.innerHTML = '';
@@ -821,6 +933,15 @@ function renderArchScenarios() {
 // ═══════════════════════════════════════════════════════════════════
 //  PROMPT BUILDER
 // ═══════════════════════════════════════════════════════════════════
+var DEFAULT_DIRECTION = [
+  'You are the author of an ongoing collaborative fiction.',
+  'You are currently writing the role of {name}.',
+  'Write only {name}\'s contributions to the scene — their actions, dialogue, and reactions.',
+  'Never write for any other character.'
+].join('\n');
+
+var DEFAULT_CLOSING = "Write {name}'s next response. Narrative prose — action and dialogue. Stop when their contribution is complete.";
+
 function buildPrompt(targetId, transcriptOverride) {
   var target = programState.participants[targetId];
 
@@ -867,12 +988,9 @@ function buildPrompt(targetId, transcriptOverride) {
     return msg.speakerName + ': ' + msg.text;
   }).join('\n\n');
 
-  var systemPrompt = [
-    'You are the author of an ongoing collaborative fiction.',
-    'You are currently writing the role of ' + target.displayName + '.',
-    'Write only ' + target.displayName + "'s contributions to the scene — their actions, dialogue, and reactions.",
-    'Never write for any other character.'
-  ].join('\n') + censorAddition() + (replyLengthInstructions[replyLength] || '');
+  var template = programState.systemPromptBase || DEFAULT_DIRECTION;
+  var systemPrompt = template.replace(/\{name\}/g, target.displayName)
+    + censorAddition() + (replyLengthInstructions[replyLength] || '');
 
   var characterSheet = [
     '## Your Character',
@@ -891,7 +1009,7 @@ function buildPrompt(targetId, transcriptOverride) {
     '## The Other Participants', castLines.join('\n'), '',
     '## Scene Transcript', transcriptText, '',
     '---',
-    'Write ' + target.displayName + "'s next response. Narrative prose — action and dialogue. Stop when their contribution is complete."
+    (programState.closingInstruction || DEFAULT_CLOSING).replace(/\{name\}/g, target.displayName)
   ].join('\n');
 
   return { systemPrompt: systemPrompt, userMessage: userMessage };
@@ -2067,6 +2185,8 @@ function switchProgram(id) {
   programState.transcript    = JSON.parse(JSON.stringify(data.transcript));
   setAutoMode(data.autoMode || 'ai-choice');
   setReplyLength(data.replyLength || 'few');
+  programState.systemPromptBase    = data.systemPromptBase    || DEFAULT_DIRECTION;
+  programState.closingInstruction  = data.closingInstruction  || DEFAULT_CLOSING;
 
   // Sync presence map
   presence = {};
@@ -2076,6 +2196,8 @@ function switchProgram(id) {
 
   // Re-render Arch
   renderParticipants();
+  renderArchDirection();
+  renderArchClosingInstruction();
   renderArchEnvironments();
   renderArchScenarios();
 
@@ -2416,7 +2538,7 @@ function deleteProgram(id) {
       programState.participants = {}; programState.userPersonaId = null;
       programState.transcript = [];
       presence = {};
-      renderParticipants(); renderArchEnvironments(); renderArchScenarios();
+      renderParticipants(); renderArchDirection(); renderArchClosingInstruction(); renderArchEnvironments(); renderArchScenarios();
       document.getElementById('messages-container').innerHTML = '';
       renderTree();
       scheduleSave();
@@ -2507,8 +2629,10 @@ function syncProgramStateToStore() {
   programsStore[activeProgramId].participants  = programState.participants;
   programsStore[activeProgramId].userPersonaId = programState.userPersonaId;
   programsStore[activeProgramId].transcript    = programState.transcript;
-  programsStore[activeProgramId].autoMode      = autoMode;
-  programsStore[activeProgramId].replyLength   = replyLength;
+  programsStore[activeProgramId].autoMode           = autoMode;
+  programsStore[activeProgramId].replyLength        = replyLength;
+  programsStore[activeProgramId].systemPromptBase   = programState.systemPromptBase;
+  programsStore[activeProgramId].closingInstruction = programState.closingInstruction;
 }
 
 function saveToStorage() {
@@ -2639,6 +2763,8 @@ loadFromStorage();
 backfillTranscriptPresence();
 renderTree();
 renderParticipants();
+renderArchDirection();
+renderArchClosingInstruction();
 renderArchEnvironments();
 renderArchScenarios();
 (function() {

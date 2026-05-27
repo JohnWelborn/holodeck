@@ -91,7 +91,11 @@ var programState = {
   transcript: [
     { speakerName:'Cleverly', participantId:'CL', text:'Cleverly set her map on the table without unfolding it all the way. She looked at John. "So. Together or not."' },
     { speakerName:'Stew',     participantId:'ST', text:'Stew picked up a can of beans and shook it. "I vote together. She found food."' }
-  ]
+  ],
+
+  systemPromptBase: 'You are the author of an ongoing collaborative fiction.\nYou are currently writing the role of {name}.\nWrite only {name}\'s contributions to the scene — their actions, dialogue, and reactions.\nNever write for any other character.',
+
+  closingInstruction: "Write {name}'s next response. Narrative prose — action and dialogue. Stop when their contribution is complete."
 };
 
 // ═══════════════════════════════════════════════════════════════════

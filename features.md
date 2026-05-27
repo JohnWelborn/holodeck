@@ -99,6 +99,12 @@ Suggestions — clickable buttons that send the option as a message; arrow-key n
 
 ## The Arch (Right Panel)
 
+Direction — two clickable cards at the top of the Arch, each opening a modal for editing:
+- **System prompt** (`systemPromptBase`) — the full character system prompt template. Use `{name}` where the character's display name should be inserted. Defaults to the standard 4-line author/character framing.
+- **Closing instruction** (`closingInstruction`) — the final line of the user turn telling the LLM what to write. Use `{name}` for the character's name. Defaults to "Write {name}'s next response. Narrative prose — action and dialogue. Stop when their contribution is complete."
+
+Both are saved per-program.
+
 Environments & Scenarios — add (opens library modal), edit, remove from scene
 
 Participants:
