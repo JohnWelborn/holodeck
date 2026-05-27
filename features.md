@@ -19,7 +19,6 @@
 - Model name — live input
 - API token — password field, live input
 - Test Connection — fires a real request and reports success/failure in the status bar
-- PG-13 censor — toggle that appends a content restriction instruction to every system prompt
 - Export to file — downloads a JSON snapshot of all programs, library, and settings (token excluded)
 - Import from file — restores from an exported file; keeps current API token, then reloads
 - Reset to defaults — clears all saved data and reloads with defaults; API settings are preserved
@@ -99,11 +98,12 @@ Suggestions — clickable buttons that send the option as a message; arrow-key n
 
 ## The Arch (Right Panel)
 
-Direction — two clickable cards at the top of the Arch, each opening a modal for editing:
+Direction — collapsible section (default collapsed) with three clickable cards, each opening a modal for editing:
 - **System prompt** (`systemPromptBase`) — the full character system prompt template. Use `{name}` where the character's display name should be inserted. Defaults to the standard 4-line author/character framing.
 - **Closing instruction** (`closingInstruction`) — the final line of the user turn telling the LLM what to write. Use `{name}` for the character's name. Defaults to "Write {name}'s next response. Narrative prose — action and dialogue. Stop when their contribution is complete."
+- **Content policy** (`contentPolicy`) — appended to the system prompt on every character turn. Defaults to a PG-13 restriction. Leave empty to disable.
 
-Both are saved per-program.
+All three are saved per-program.
 
 Environments & Scenarios — add (opens library modal), edit, remove from scene
 

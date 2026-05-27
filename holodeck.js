@@ -20,7 +20,7 @@ function genId(prefix) { return prefix + '-' + Date.now(); }
 // ═══════════════════════════════════════════════════════════════════
 //  API SETTINGS
 // ═══════════════════════════════════════════════════════════════════
-var apiSettings = { baseUrl: 'http://localhost:1337/v1', model: 'mistral-v7-tekken', token: '', censor: true };
+var apiSettings = { baseUrl: 'http://localhost:1337/v1', model: 'mistral-v7-tekken', token: '' };
 document.getElementById('api-url').value   = apiSettings.baseUrl;
 document.getElementById('api-model').value = apiSettings.model;
 document.getElementById('api-token').value = apiSettings.token;
@@ -103,8 +103,8 @@ function openModal(type, editId) {
   document.getElementById('modal-overlay').classList.add('open');
   document.getElementById('modal-box').classList.add('open');
 
-  if (type === 'direction' || type === 'closing') currentModalTab = 'new';
-  var titles = { env:'Environments', scen:'Scenarios', participant:'Participants', trait:'Traits', direction:'Direction', closing:'Direction' };
+  if (type === 'direction' || type === 'closing' || type === 'content-policy') currentModalTab = 'new';
+  var titles = { env:'Environments', scen:'Scenarios', participant:'Participants', trait:'Traits', direction:'Direction', closing:'Direction', 'content-policy':'Direction' };
   document.getElementById('modal-title').textContent = titles[type] || '';
   document.getElementById('modal-subtitle').textContent = editId ? 'Editing' : '';
 
@@ -163,6 +163,8 @@ function renderModalContent() {
       document.getElementById('modal-subtitle').textContent = 'Character System Prompt';
     } else if (currentModal === 'closing') {
       document.getElementById('modal-subtitle').textContent = 'Closing Instruction';
+    } else if (currentModal === 'content-policy') {
+      document.getElementById('modal-subtitle').textContent = 'Content Policy';
     } else {
       // Show a back-arrow in the subtitle area when not editing
       document.getElementById('modal-subtitle').innerHTML = editingItemId
@@ -173,7 +175,7 @@ function renderModalContent() {
     footer.style.display = 'flex';
     var saveBtn = document.getElementById('modal-save-btn');
     var noteEl  = document.getElementById('modal-footer-note');
-    if (currentModal === 'direction' || currentModal === 'closing') {
+    if (currentModal === 'direction' || currentModal === 'closing' || currentModal === 'content-policy') {
       saveBtn.textContent = 'Save';
       noteEl.textContent  = '';
     } else if (editingItemId) {
@@ -368,7 +370,8 @@ function renderFormTab(container) {
   else if (currentModal === 'participant') renderParticipantForm(container);
   else if (currentModal === 'trait')       renderTraitForm(container);
   else if (currentModal === 'direction')   renderDirectionForm(container);
-  else if (currentModal === 'closing')     renderClosingForm(container);
+  else if (currentModal === 'closing')        renderClosingForm(container);
+  else if (currentModal === 'content-policy') renderContentPolicyForm(container);
 }
 
 function renderEnvForm(container) {
@@ -520,7 +523,8 @@ function saveModalForm() {
   else if (currentModal === 'participant') saveParticipant();
   else if (currentModal === 'trait')       saveTrait();
   else if (currentModal === 'direction')   saveDirection();
-  else if (currentModal === 'closing')     saveClosing();
+  else if (currentModal === 'closing')        saveClosing();
+  else if (currentModal === 'content-policy') saveContentPolicy();
 }
 
 function saveEnv() {
@@ -736,6 +740,24 @@ function saveClosing() {
   scheduleSave();
 }
 
+function renderContentPolicyForm(container) {
+  container.innerHTML = [
+    '<div class="form-group">',
+    '  <p class="form-hint">Appended to the system prompt on every character turn. Leave empty to disable.</p>',
+    '  <textarea class="form-input form-textarea" id="f-content-policy" style="min-height:120px;font-family:inherit;font-size:12px;"></textarea>',
+    '</div>'
+  ].join('');
+  var current = programState.contentPolicy !== undefined ? programState.contentPolicy : DEFAULT_CONTENT_POLICY;
+  document.getElementById('f-content-policy').value = current;
+  setTimeout(function(){ var el = document.getElementById('f-content-policy'); if (el) el.focus(); }, 40);
+}
+
+function saveContentPolicy() {
+  programState.contentPolicy = (document.getElementById('f-content-policy').value || '').trim();
+  closeModal();
+  scheduleSave();
+}
+
 function removeTrait(participantId, traitIndex) {
   var p = programState.participants[participantId];
   if (!p || !p.traits) return;
@@ -852,6 +874,32 @@ function renderArchClosingInstruction() {
   container.appendChild(item);
 }
 
+function renderArchContentPolicy() {
+  var container = document.getElementById('arch-content-policy');
+  if (!container) return;
+  container.innerHTML = '';
+
+  var item = document.createElement('div');
+  item.className = 'arch-item';
+  item.style.cssText = 'display:flex;align-items:center;padding:5px 7px;border-radius:var(--border-radius-md);background:var(--color-background-primary);border:0.5px solid var(--color-border-tertiary);margin-bottom:3px;min-width:0;cursor:pointer;';
+  item.onclick = function() { openModal('content-policy'); };
+
+  var nameEl = document.createElement('span');
+  nameEl.className = 'arch-item-name';
+  nameEl.style.cssText = 'font-size:12px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;flex:1;';
+  nameEl.textContent = 'Content policy';
+  item.appendChild(nameEl);
+
+  var editBtn = document.createElement('button');
+  editBtn.title = 'Edit content policy';
+  editBtn.style.cssText = 'color:var(--color-text-secondary);display:flex;align-items:center;padding:1px;border-radius:4px;flex-shrink:0;';
+  editBtn.innerHTML = '<i class="ti ti-pencil" style="font-size:11px;"></i>';
+  editBtn.onclick = function(e) { e.stopPropagation(); openModal('content-policy'); };
+  item.appendChild(editBtn);
+
+  container.appendChild(item);
+}
+
 function renderArchEnvironments() {
   var container = document.getElementById('arch-environments');
   container.innerHTML = '';
@@ -942,6 +990,8 @@ var DEFAULT_DIRECTION = [
 
 var DEFAULT_CLOSING = "Write {name}'s next response. Narrative prose — action and dialogue. Stop when their contribution is complete.";
 
+var DEFAULT_CONTENT_POLICY = 'Content policy: This is a PG-13 story. Keep all content appropriate for a general teenage audience. Avoid explicit sexual content, graphic violence or gore, and strong profanity. Romantic and action content is fine but must remain tasteful and non-graphic. Conflict and tension are allowed; gratuitous or exploitative depictions are not. If the conversation has already violated this policy, decline to continue and say so.';
+
 function buildPrompt(targetId, transcriptOverride) {
   var target = programState.participants[targetId];
 
@@ -989,8 +1039,10 @@ function buildPrompt(targetId, transcriptOverride) {
   }).join('\n\n');
 
   var template = programState.systemPromptBase || DEFAULT_DIRECTION;
+  var contentPolicyText = programState.contentPolicy !== undefined ? programState.contentPolicy : DEFAULT_CONTENT_POLICY;
   var systemPrompt = template.replace(/\{name\}/g, target.displayName)
-    + censorAddition() + (replyLengthInstructions[replyLength] || '');
+    + (contentPolicyText ? '\n\n' + contentPolicyText : '')
+    + (replyLengthInstructions[replyLength] || '');
 
   var characterSheet = [
     '## Your Character',
@@ -1133,10 +1185,6 @@ function createMsgRow(participantId, text, isUserMsg) {
 // ═══════════════════════════════════════════════════════════════════
 //  API HELPERS
 // ═══════════════════════════════════════════════════════════════════
-function censorAddition() {
-  if (!apiSettings.censor) return '';
-  return '\n\nContent policy: This is a PG-13 story. Keep all content appropriate for a general teenage audience. Avoid explicit sexual content, graphic violence or gore, and strong profanity. Romantic and action content is fine but must remain tasteful and non-graphic. Conflict and tension are allowed; gratuitous or exploitative depictions are not.';
-}
 
 function buildHeaders() {
   var h = { 'Content-Type': 'application/json' };
@@ -1857,6 +1905,8 @@ function buildUserSuggestionPrompt(targetId, count, draftText) {
   var target = programState.participants[targetId];
   if (!target) return null;
 
+  var contentPolicyText = programState.contentPolicy !== undefined ? programState.contentPolicy : DEFAULT_CONTENT_POLICY;
+
   var envText = programState.environments.map(function(e){
     return e.name + ' — ' + e.description;
   }).join('\n\n');
@@ -1911,7 +1961,7 @@ function buildUserSuggestionPrompt(targetId, count, draftText) {
       'You are helping a user expand a draft message in a collaborative fiction.',
       'Write a complete, natural in-character version of what they started.',
       'Return a JSON array containing exactly 1 string.'
-    ].join('\n') + censorAddition();
+    ].join('\n') + (contentPolicyText ? '\n\n' + contentPolicyText : '');
     closingInstruction = 'The user has drafted: "' + draftText + '". Expand this into a complete, natural in-character message for ' + target.displayName + '. Return only a JSON array containing exactly 1 string.';
   } else {
     systemPrompt = [
@@ -1919,7 +1969,7 @@ function buildUserSuggestionPrompt(targetId, count, draftText) {
       'Generate varied response options for ' + target.displayName + '.',
       'Options should be short (1–2 sentences each) and natural.',
       'Return only a JSON array of strings.'
-    ].join('\n') + censorAddition();
+    ].join('\n') + (contentPolicyText ? '\n\n' + contentPolicyText : '');
     closingInstruction = 'Return a JSON array of exactly ' + count + ' short response option' + (count === 1 ? '' : 's') + ' that ' + target.displayName + ' might say next. Return only the JSON array, no other text.';
   }
 
@@ -2187,6 +2237,7 @@ function switchProgram(id) {
   setReplyLength(data.replyLength || 'few');
   programState.systemPromptBase    = data.systemPromptBase    || DEFAULT_DIRECTION;
   programState.closingInstruction  = data.closingInstruction  || DEFAULT_CLOSING;
+  programState.contentPolicy       = data.contentPolicy       !== undefined ? data.contentPolicy : DEFAULT_CONTENT_POLICY;
 
   // Sync presence map
   presence = {};
@@ -2198,6 +2249,7 @@ function switchProgram(id) {
   renderParticipants();
   renderArchDirection();
   renderArchClosingInstruction();
+  renderArchContentPolicy();
   renderArchEnvironments();
   renderArchScenarios();
 
@@ -2410,7 +2462,7 @@ function submitAIBrief() {
     body: JSON.stringify({
       model: apiSettings.model,
       messages: [
-        { role: 'system', content: AI_PROGRAM_SYSTEM_PROMPT + censorAddition() },
+        { role: 'system', content: AI_PROGRAM_SYSTEM_PROMPT },
         { role: 'user',   content: buildAIBriefUserMessage(briefData) }
       ],
       temperature: 0.85,
@@ -2538,7 +2590,7 @@ function deleteProgram(id) {
       programState.participants = {}; programState.userPersonaId = null;
       programState.transcript = [];
       presence = {};
-      renderParticipants(); renderArchDirection(); renderArchClosingInstruction(); renderArchEnvironments(); renderArchScenarios();
+      renderParticipants(); renderArchDirection(); renderArchClosingInstruction(); renderArchContentPolicy(); renderArchEnvironments(); renderArchScenarios();
       document.getElementById('messages-container').innerHTML = '';
       renderTree();
       scheduleSave();
@@ -2633,6 +2685,7 @@ function syncProgramStateToStore() {
   programsStore[activeProgramId].replyLength        = replyLength;
   programsStore[activeProgramId].systemPromptBase   = programState.systemPromptBase;
   programsStore[activeProgramId].closingInstruction = programState.closingInstruction;
+  programsStore[activeProgramId].contentPolicy      = programState.contentPolicy;
 }
 
 function saveToStorage() {
@@ -2716,7 +2769,7 @@ function exportData() {
     library: library,
     programsStore: programsStore,
     treeData: treeData,
-    apiSettings: { baseUrl: apiSettings.baseUrl, model: apiSettings.model, censor: apiSettings.censor },
+    apiSettings: { baseUrl: apiSettings.baseUrl, model: apiSettings.model },
     activeProgramId: activeProgramId
   };
   var blob = new Blob([JSON.stringify(payload, null, 2)], { type: 'application/json' });
@@ -2765,6 +2818,7 @@ renderTree();
 renderParticipants();
 renderArchDirection();
 renderArchClosingInstruction();
+renderArchContentPolicy();
 renderArchEnvironments();
 renderArchScenarios();
 (function() {
