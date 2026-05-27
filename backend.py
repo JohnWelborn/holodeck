@@ -2,7 +2,7 @@ import yaml
 import uvicorn
 from urllib.parse import urlparse
 from llama_cpp.server.app import create_app
-from llama_cpp.server.settings import Settings, ModelSettings
+from llama_cpp.server.settings import ServerSettings, ModelSettings
 
 with open('config.yaml') as f:
     config = yaml.safe_load(f) or {}
@@ -15,11 +15,11 @@ model_settings = [ModelSettings(
     n_ctx=32768,
 )]
 
-settings = Settings(
+settings = ServerSettings(
     host=parsed.hostname,
     port=parsed.port,
     api_key=config.get('password', ''),
 )
 
-app = create_app(settings=settings, model_settings=model_settings)
+app = create_app(server_settings=settings, model_settings=model_settings)
 uvicorn.run(app, host=settings.host, port=settings.port)
