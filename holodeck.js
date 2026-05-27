@@ -76,6 +76,7 @@ var presence     = { JO:true, ST:true, CL:true };
 var isGenerating  = false;
 var cyoaMode      = false;
 var autoMode      = 'ai-choice'; // 'manual' | 'ai-choice' | 'everyone'
+var replyLength   = 'few';       // 'sentence' | 'few' | 'short-para' | 'para' | 'full'
 var everyoneQueue = null;     // array of participantIds remaining in current round, or null
 var isSuggesting  = false;
 
@@ -871,7 +872,7 @@ function buildPrompt(targetId, transcriptOverride) {
     'You are currently writing the role of ' + target.displayName + '.',
     'Write only ' + target.displayName + "'s contributions to the scene — their actions, dialogue, and reactions.",
     'Never write for any other character.'
-  ].join('\n') + censorAddition();
+  ].join('\n') + censorAddition() + (replyLengthInstructions[replyLength] || '');
 
   var characterSheet = [
     '## Your Character',
@@ -1142,7 +1143,7 @@ async function streamCompletion(targetId, prompt, bubble, container) {
       { role:'user',   content:prompt.userMessage  }
     ],
     temperature: 0.85,
-    max_tokens: 400,
+    max_tokens: replyLengthTokens[replyLength] || 450,
     top_p: 0.95,
     frequency_penalty: 0.1,
     presence_penalty: 0.1,
@@ -1905,6 +1906,22 @@ function showAutoModeMenu(event) {
 
 var autoModeIcons = { 'manual': 'ti-bolt-off', 'ai-choice': 'ti-brain', 'everyone': 'ti-users' };
 
+var replyLengthTokens = {
+  'sentence':   50,
+  'few':       100,
+  'short-para':175,
+  'para':      300,
+  'full':      450
+};
+
+var replyLengthInstructions = {
+  'sentence':   '\nKeep your response to a single sentence.',
+  'few':        '\nKeep your response to 2–3 sentences.',
+  'short-para': '\nKeep your response to one short paragraph.',
+  'para':       '\nWrite one full paragraph.',
+  'full':       '\nWrite a full response — aim to fill the screen.'
+};
+
 function setAutoMode(mode) {
   autoMode = mode;
   if (mode !== 'everyone') everyoneQueue = null;
@@ -1915,6 +1932,29 @@ function setAutoMode(mode) {
   document.getElementById('auto-mode-menu').style.display = 'none';
   document.querySelectorAll('#auto-mode-menu .auto-mode-item').forEach(function(el) {
     el.classList.toggle('auto-mode-item-active', el.dataset.mode === mode);
+  });
+}
+
+function showReplyLengthMenu(event) {
+  event.stopPropagation();
+  var menu = document.getElementById('reply-length-menu');
+  var isVisible = menu.style.display !== 'none';
+  if (isVisible) { menu.style.display = 'none'; return; }
+  var btn = document.getElementById('reply-length-btn');
+  var rect = btn.getBoundingClientRect();
+  menu.style.left = rect.left + 'px';
+  menu.style.top  = (rect.top - menu.offsetHeight - 4) + 'px';
+  menu.style.display = 'block';
+  requestAnimationFrame(function() {
+    menu.style.top = (rect.top - menu.offsetHeight - 4) + 'px';
+  });
+}
+
+function setReplyLength(len) {
+  replyLength = len;
+  document.getElementById('reply-length-menu').style.display = 'none';
+  document.querySelectorAll('#reply-length-menu .auto-mode-item').forEach(function(el) {
+    el.classList.toggle('auto-mode-item-active', el.dataset.len === len);
   });
 }
 
@@ -2026,6 +2066,7 @@ function switchProgram(id) {
   programState.userPersonaId = data.userPersonaId;
   programState.transcript    = JSON.parse(JSON.stringify(data.transcript));
   setAutoMode(data.autoMode || 'ai-choice');
+  setReplyLength(data.replyLength || 'few');
 
   // Sync presence map
   presence = {};
@@ -2467,6 +2508,7 @@ function syncProgramStateToStore() {
   programsStore[activeProgramId].userPersonaId = programState.userPersonaId;
   programsStore[activeProgramId].transcript    = programState.transcript;
   programsStore[activeProgramId].autoMode      = autoMode;
+  programsStore[activeProgramId].replyLength   = replyLength;
 }
 
 function saveToStorage() {

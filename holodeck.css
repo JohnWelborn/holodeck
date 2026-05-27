@@ -60,6 +60,16 @@
       border-color: var(--color-border-primary) !important;
     }
 
+    /* ── Reply-length popup menu ── */
+    #reply-length-menu {
+      background: var(--color-background-secondary);
+      border: 0.5px solid var(--color-border-secondary);
+      border-radius: var(--border-radius-md);
+      padding: 4px;
+      min-width: 190px;
+      box-shadow: 0 4px 16px rgba(0,0,0,0.25);
+    }
+
     /* ── Auto-mode popup menu ── */
     #auto-mode-menu {
       background: var(--color-background-secondary);

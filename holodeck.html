@@ -217,6 +217,9 @@
           <button id="expand-btn" onclick="triggerExpand()" title="Expand what I've typed" style="border:0.5px solid var(--color-border-secondary);border-radius:var(--border-radius-md);width:34px;height:34px;display:flex;align-items:center;justify-content:center;color:var(--color-text-secondary);flex-shrink:0;margin-bottom:1px;">
             <i class="ti ti-wand" style="font-size:15px;"></i>
           </button>
+          <button id="reply-length-btn" onclick="showReplyLengthMenu(event)" title="Reply length" class="mode-btn-active" style="border:0.5px solid var(--color-border-secondary);border-radius:var(--border-radius-md);width:34px;height:34px;display:flex;align-items:center;justify-content:center;color:var(--color-text-secondary);flex-shrink:0;margin-bottom:1px;">
+            <i class="ti ti-text-size" style="font-size:15px;"></i>
+          </button>
           <button id="auto-btn" onclick="showAutoModeMenu(event)" title="Auto-reply mode" class="mode-btn-active" style="border:0.5px solid var(--color-border-secondary);border-radius:var(--border-radius-md);width:34px;height:34px;display:flex;align-items:center;justify-content:center;color:var(--color-text-secondary);flex-shrink:0;margin-bottom:1px;">
             <i class="ti ti-brain" style="font-size:15px;"></i>
           </button>
@@ -267,6 +270,14 @@
       </div>
     </div>
   </div>
+</div>
+
+<div id="reply-length-menu" style="display:none;position:fixed;z-index:300;">
+  <div class="auto-mode-item" data-len="sentence" onclick="setReplyLength('sentence')">One sentence <span style="opacity:.5">(50)</span></div>
+  <div class="auto-mode-item auto-mode-item-active" data-len="few" onclick="setReplyLength('few')">A few sentences <span style="opacity:.5">(100)</span></div>
+  <div class="auto-mode-item" data-len="short-para" onclick="setReplyLength('short-para')">Short paragraph <span style="opacity:.5">(175)</span></div>
+  <div class="auto-mode-item" data-len="para" onclick="setReplyLength('para')">Full paragraph <span style="opacity:.5">(300)</span></div>
+  <div class="auto-mode-item" data-len="full" onclick="setReplyLength('full')">Full response <span style="opacity:.5">(450)</span></div>
 </div>
 
 <div id="auto-mode-menu" style="display:none;position:fixed;z-index:300;">

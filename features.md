@@ -86,6 +86,12 @@ Modes:
   - Manual Trigger — no automation; characters only respond when manually triggered via ▶
   - AI Choice — after each user message, an LLM call picks which AI participant speaks next and triggers them
   - Everyone Gets Turn — after each user message, all present non-user participants speak in order of the participants list
+- Reply length — text-size button opens a popup to select one of five response length levels; each sets both a system-prompt instruction and the `max_tokens` cap for the next LLM call:
+  - One sentence (50 tokens)
+  - A few sentences (100 tokens)
+  - Short paragraph (175 tokens)
+  - Full paragraph (300 tokens)
+  - Full response (450 tokens) — default; aims to fill the screen
 
 Suggestions — clickable buttons that send the option as a message; arrow-key navigable
 
