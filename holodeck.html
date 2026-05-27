@@ -217,8 +217,8 @@
           <button id="expand-btn" onclick="triggerExpand()" title="Expand what I've typed" style="border:0.5px solid var(--color-border-secondary);border-radius:var(--border-radius-md);width:34px;height:34px;display:flex;align-items:center;justify-content:center;color:var(--color-text-secondary);flex-shrink:0;margin-bottom:1px;">
             <i class="ti ti-wand" style="font-size:15px;"></i>
           </button>
-          <button id="auto-btn" onclick="toggleAutoMode()" title="Auto-reply" style="border:0.5px solid var(--color-border-secondary);border-radius:var(--border-radius-md);width:34px;height:34px;display:flex;align-items:center;justify-content:center;color:var(--color-text-secondary);flex-shrink:0;margin-bottom:1px;">
-            <i class="ti ti-bolt" style="font-size:15px;"></i>
+          <button id="auto-btn" onclick="showAutoModeMenu(event)" title="Auto-reply mode" class="mode-btn-active" style="border:0.5px solid var(--color-border-secondary);border-radius:var(--border-radius-md);width:34px;height:34px;display:flex;align-items:center;justify-content:center;color:var(--color-text-secondary);flex-shrink:0;margin-bottom:1px;">
+            <i class="ti ti-brain" style="font-size:15px;"></i>
           </button>
         </div>
       </div>
@@ -267,6 +267,12 @@
       </div>
     </div>
   </div>
+</div>
+
+<div id="auto-mode-menu" style="display:none;position:fixed;z-index:300;">
+  <div class="auto-mode-item" data-mode="manual" onclick="setAutoMode('manual')">Manual Trigger</div>
+  <div class="auto-mode-item auto-mode-item-active" data-mode="ai-choice" onclick="setAutoMode('ai-choice')">AI Choice</div>
+  <div class="auto-mode-item" data-mode="everyone" onclick="setAutoMode('everyone')">Everyone Gets Turn</div>
 </div>
 
 <script src="holodeck-data.js"></script>

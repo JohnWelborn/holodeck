@@ -44,6 +44,15 @@ document.addEventListener('click', function(e) {
   }
 });
 
+document.addEventListener('click', function(e) {
+  var menu = document.getElementById('auto-mode-menu');
+  if (!menu || menu.style.display === 'none') return;
+  var btn = document.getElementById('auto-btn');
+  if (!menu.contains(e.target) && !btn.contains(e.target)) {
+    menu.style.display = 'none';
+  }
+});
+
 // ═══════════════════════════════════════════════════════════════════
 //  AVATAR PALETTE
 // ═══════════════════════════════════════════════════════════════════
@@ -64,10 +73,11 @@ var selectedPaletteIndex = 0;
 //  VISUAL STATE
 // ═══════════════════════════════════════════════════════════════════
 var presence     = { JO:true, ST:true, CL:true };
-var isGenerating = false;
-var cyoaMode     = false;
-var autoMode     = false;
-var isSuggesting = false;
+var isGenerating  = false;
+var cyoaMode      = false;
+var autoMode      = 'ai-choice'; // 'manual' | 'ai-choice' | 'everyone'
+var everyoneQueue = null;     // array of participantIds remaining in current round, or null
+var isSuggesting  = false;
 
 // ═══════════════════════════════════════════════════════════════════
 //  PANEL TOGGLES
@@ -1116,8 +1126,8 @@ async function triggerCharacter(targetId) {
     isGenerating = false;
     setTriggerButtonsDisabled(false);
     scheduleSave();
-    if (cyoaMode && !autoMode) generateCYOASuggestions();
-    if (autoMode) autoReply();
+    if (cyoaMode && autoMode === 'manual') generateCYOASuggestions();
+    runAutoMode();
   }
 }
 
@@ -1649,6 +1659,8 @@ function sendText(text) {
   container.scrollTop = container.scrollHeight;
   scheduleSave();
   if (cyoaMode) generateCYOASuggestions();
+  if (autoMode === 'everyone') initEveryoneRound();
+  if (autoMode === 'ai-choice') triggerAiChoice();
 }
 
 function sendMessage() {
@@ -1875,32 +1887,89 @@ async function triggerExpand() {
   }
 }
 
-function toggleAutoMode() {
-  autoMode = !autoMode;
-  document.getElementById('auto-btn').classList.toggle('mode-btn-active', autoMode);
+function showAutoModeMenu(event) {
+  event.stopPropagation();
+  var menu = document.getElementById('auto-mode-menu');
+  var isVisible = menu.style.display !== 'none';
+  if (isVisible) { menu.style.display = 'none'; return; }
+  var btn = document.getElementById('auto-btn');
+  var rect = btn.getBoundingClientRect();
+  menu.style.left = rect.left + 'px';
+  menu.style.top  = (rect.top - menu.offsetHeight - 4) + 'px';
+  menu.style.display = 'block';
+  // reposition after render (offsetHeight was 0 before first display)
+  requestAnimationFrame(function() {
+    menu.style.top = (rect.top - menu.offsetHeight - 4) + 'px';
+  });
 }
 
-async function autoReply() {
-  if (!autoMode || isGenerating || isSuggesting) return;
-  var userId = programState.userPersonaId;
-  if (!userId || !programState.participants[userId]) return;
-  var lastEntry = programState.transcript[programState.transcript.length - 1];
-  if (!lastEntry || lastEntry.participantId === userId) return;
+var autoModeIcons = { 'manual': 'ti-bolt-off', 'ai-choice': 'ti-brain', 'everyone': 'ti-users' };
 
-  isGenerating = true;
-  setTriggerButtonsDisabled(true);
-  var replyText = null;
+function setAutoMode(mode) {
+  autoMode = mode;
+  if (mode !== 'everyone') everyoneQueue = null;
+  document.getElementById('auto-btn').classList.toggle('mode-btn-active', mode !== 'manual');
+  var icon = document.querySelector('#auto-btn i');
+  icon.className = 'ti ' + (autoModeIcons[mode] || 'ti-bolt-off');
+  icon.style.fontSize = '15px';
+  document.getElementById('auto-mode-menu').style.display = 'none';
+  document.querySelectorAll('#auto-mode-menu .auto-mode-item').forEach(function(el) {
+    el.classList.toggle('auto-mode-item-active', el.dataset.mode === mode);
+  });
+}
+
+function runAutoMode() {
+  if (autoMode === 'everyone') advanceEveryoneQueue();
+}
+
+function initEveryoneRound() {
+  var userId = programState.userPersonaId;
+  var ids = currentPresentIds().filter(function(id) { return id !== userId; });
+  everyoneQueue = ids.slice();
+  advanceEveryoneQueue();
+}
+
+function advanceEveryoneQueue() {
+  if (!everyoneQueue || everyoneQueue.length === 0) { everyoneQueue = null; return; }
+  if (isGenerating || isSuggesting) return;
+  var nextId = everyoneQueue.shift();
+  triggerCharacter(nextId);
+}
+
+async function triggerAiChoice() {
+  if (isGenerating || isSuggesting) return;
+  var userId = programState.userPersonaId;
+  var candidates = currentPresentIds().filter(function(id) { return id !== userId; });
+  if (candidates.length === 0) return;
+  var nextId = candidates.length === 1 ? candidates[0] : await pickNextSpeaker(candidates);
+  triggerCharacter(nextId);
+}
+
+async function pickNextSpeaker(candidateIds) {
+  var names = candidateIds.map(function(id) {
+    return programState.participants[id] ? programState.participants[id].displayName : id;
+  });
+  var tail = programState.transcript.slice(-6).map(function(m) {
+    return m.speakerName + ': ' + m.text;
+  }).join('\n');
+  var prompt = {
+    systemPrompt: 'You are a director choosing who speaks next in a collaborative fiction scene. Given the recent dialogue, pick the most dramatically appropriate character from the list. Reply with a JSON array containing exactly one string: the character\'s name as listed.',
+    userMessage: 'Characters who have not yet spoken this round: ' + names.join(', ') + '\n\nRecent dialogue:\n' + tail + '\n\nWho should speak next? Return only a JSON array with one name, e.g. ["Name"].'
+  };
   try {
-    var prompt = buildUserSuggestionPrompt(userId, 1);
-    var items = await callSuggestionApi(prompt, 0.85, 300);
-    if (Array.isArray(items) && items.length > 0) replyText = items[0];
-  } catch (err) {
-    console.error('[Holodeck] Auto reply error:', err);
-  } finally {
-    isGenerating = false;
-    setTriggerButtonsDisabled(false);
+    var result = await callSuggestionApi(prompt, 0.8, 50);
+    if (Array.isArray(result) && result.length > 0) {
+      var chosen = result[0].trim().toLowerCase();
+      var match = candidateIds.find(function(id) {
+        var p = programState.participants[id];
+        return p && p.displayName.toLowerCase() === chosen;
+      });
+      if (match) return match;
+    }
+  } catch(err) {
+    console.error('[Holodeck] pickNextSpeaker error:', err);
   }
-  if (replyText) sendText(replyText);
+  return candidateIds[0];
 }
 
 // Backfill seeded transcripts — assume everyone in the participant list was
@@ -1956,6 +2025,7 @@ function switchProgram(id) {
   programState.participants  = JSON.parse(JSON.stringify(data.participants));
   programState.userPersonaId = data.userPersonaId;
   programState.transcript    = JSON.parse(JSON.stringify(data.transcript));
+  setAutoMode(data.autoMode || 'ai-choice');
 
   // Sync presence map
   presence = {};
@@ -2396,6 +2466,7 @@ function syncProgramStateToStore() {
   programsStore[activeProgramId].participants  = programState.participants;
   programsStore[activeProgramId].userPersonaId = programState.userPersonaId;
   programsStore[activeProgramId].transcript    = programState.transcript;
+  programsStore[activeProgramId].autoMode      = autoMode;
 }
 
 function saveToStorage() {
@@ -2456,6 +2527,7 @@ function loadFromStorage() {
       programState.participants  = JSON.parse(JSON.stringify(d.participants  || {}));
       programState.userPersonaId = d.userPersonaId || null;
       programState.transcript    = JSON.parse(JSON.stringify(d.transcript    || []));
+      setAutoMode(d.autoMode || 'ai-choice');
       presence = {};
       Object.keys(programState.participants).forEach(function(k){ presence[k] = true; });
     }

@@ -82,7 +82,10 @@ Input:
 Modes:
 - CYOA — generates clickable suggestion options after each message
 - Expand / Wand — expands draft text via LLM, presents result as a suggestion
-- Auto — automatically triggers the next character response after each message
+- Auto — bolt button opens a popup to select one of three auto-play modes:
+  - Manual Trigger — no automation; characters only respond when manually triggered via ▶
+  - AI Choice — after each user message, an LLM call picks which AI participant speaks next and triggers them
+  - Everyone Gets Turn — after each user message, all present non-user participants speak in order of the participants list
 
 Suggestions — clickable buttons that send the option as a message; arrow-key navigable
 
