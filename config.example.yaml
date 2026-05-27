@@ -1,5 +1,6 @@
-port: 8080
-base_url: http://localhost:1337/v1
-model: mistral-v7-tekken
+ui_port: 8080
+model_url: http://127.0.0.1:8081/v1
+model: mistral-small-24b-instruct-2501
+model_path: /mnt/c/Users/.../models/Mistral-Small-24B-Instruct-2501-Q8_0.gguf
 password: sk-...
 censor: true

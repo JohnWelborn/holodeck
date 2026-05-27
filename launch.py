@@ -8,7 +8,7 @@ if os.path.exists('config.yaml'):
     with open('config.yaml') as f:
         config = yaml.safe_load(f) or {}
 
-PORT = config.get('port', PORT)
+PORT = config.get('ui_port', PORT)
 
 
 class Handler(http.server.SimpleHTTPRequestHandler):
@@ -23,7 +23,7 @@ class Handler(http.server.SimpleHTTPRequestHandler):
             content = f.read().decode('utf-8')
 
         overrides = {k: v for k, v in {
-            'baseUrl': config.get('base_url'),
+            'baseUrl': config.get('model_url'),
             'model':   config.get('model'),
             'token':   config.get('password'),
             'censor':  config.get('censor'),
