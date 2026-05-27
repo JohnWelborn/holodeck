@@ -17,7 +17,7 @@ Any OpenAI-compatible endpoint works — base URL, model name, and API token are
 1. Copy `config.example.yaml` to `config.yaml` and fill in your API details.
 2. Start the model backend (see [INSTALLATION.md](INSTALLATION.md) for first-time setup):
    ```
-   uv run python backend.py
+   uv run --extra backend python backend.py
    ```
 3. Launch the UI server:
    ```
