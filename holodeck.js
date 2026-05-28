@@ -2075,11 +2075,11 @@ function showAutoModeMenu(event) {
 var autoModeIcons = { 'manual': 'ti-bolt-off', 'ai-choice': 'ti-brain', 'everyone': 'ti-users' };
 
 var replyLengthTokens = {
-  'sentence':   50,
-  'few':       100,
-  'short-para':175,
-  'para':      300,
-  'full':      450
+  'sentence':  150,
+  'few':       300,
+  'short-para':500,
+  'para':      750,
+  'full':     1500
 };
 
 var replyLengthInstructions = {
@@ -2100,6 +2100,13 @@ function setAutoMode(mode) {
   document.getElementById('auto-mode-menu').style.display = 'none';
   document.querySelectorAll('#auto-mode-menu .auto-mode-item').forEach(function(el) {
     el.classList.toggle('auto-mode-item-active', el.dataset.mode === mode);
+  });
+}
+
+function initReplyLengthLabels() {
+  document.querySelectorAll('#reply-length-menu .auto-mode-item').forEach(function(el) {
+    var tokens = replyLengthTokens[el.dataset.len];
+    if (tokens) el.querySelector('.reply-length-tokens').textContent = '(' + tokens + ')';
   });
 }
 
@@ -2812,6 +2819,7 @@ function importData() {
 // ═══════════════════════════════════════════════════════════════════
 //  INIT
 // ═══════════════════════════════════════════════════════════════════
+initReplyLengthLabels();
 loadFromStorage();
 backfillTranscriptPresence();
 renderTree();
