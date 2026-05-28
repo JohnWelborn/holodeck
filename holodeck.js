@@ -2569,9 +2569,11 @@ function switchProgram(id) {
   programState.closingInstruction  = data.closingInstruction  || DEFAULT_CLOSING;
   programState.contentPolicy       = data.contentPolicy       !== undefined ? data.contentPolicy : DEFAULT_CONTENT_POLICY;
 
-  // Sync presence map
+  // Sync presence map — restore saved state, defaulting new participants to present
   presence = {};
-  Object.keys(programState.participants).forEach(function(k){ presence[k] = true; });
+  Object.keys(programState.participants).forEach(function(k){
+    presence[k] = data.presence ? (data.presence[k] !== false) : true;
+  });
 
   backfillTranscriptPresence();
 
@@ -3176,6 +3178,7 @@ function syncProgramStateToStore() {
   programsStore[activeProgramId].systemPromptBase   = programState.systemPromptBase;
   programsStore[activeProgramId].closingInstruction = programState.closingInstruction;
   programsStore[activeProgramId].contentPolicy      = programState.contentPolicy;
+  programsStore[activeProgramId].presence           = JSON.parse(JSON.stringify(presence));
 }
 
 function saveToStorage() {
@@ -3240,7 +3243,9 @@ function loadFromStorage() {
       programState.transcript    = JSON.parse(JSON.stringify(d.transcript    || []));
       setAutoMode(d.autoMode || 'ai-choice');
       presence = {};
-      Object.keys(programState.participants).forEach(function(k){ presence[k] = true; });
+      Object.keys(programState.participants).forEach(function(k){
+        presence[k] = d.presence ? (d.presence[k] !== false) : true;
+      });
     }
   } catch(e) {
     console.warn('[Holodeck] localStorage load failed:', e);
