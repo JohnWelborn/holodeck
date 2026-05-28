@@ -1147,10 +1147,6 @@ function createMsgRow(participantId, text, isUserMsg) {
   deleteBtn.className = 'ti ti-trash'; deleteBtn.title = 'Delete';
   deleteBtn.style.cssText = 'font-size:11px;color:var(--color-text-secondary);cursor:pointer;';
   actions.appendChild(deleteBtn);
-  var starBtn = document.createElement('i');
-  starBtn.className = 'ti ti-star'; starBtn.title = 'Star';
-  starBtn.style.cssText = 'font-size:11px;color:var(--color-text-secondary);cursor:pointer;';
-  actions.appendChild(starBtn);
   var forkBtn = document.createElement('i');
   forkBtn.className = 'ti ti-git-fork'; forkBtn.title = 'Fork';
   forkBtn.style.cssText = 'font-size:11px;color:var(--color-text-secondary);cursor:pointer;';
@@ -2346,10 +2342,6 @@ function createDescriptionMsgRow(text) {
   deleteBtn.className = 'ti ti-trash'; deleteBtn.title = 'Delete';
   deleteBtn.style.cssText = 'font-size:11px;color:var(--color-text-secondary);cursor:pointer;';
   actions.appendChild(deleteBtn);
-  var starBtn = document.createElement('i');
-  starBtn.className = 'ti ti-star'; starBtn.title = 'Star';
-  starBtn.style.cssText = 'font-size:11px;color:var(--color-text-secondary);cursor:pointer;';
-  actions.appendChild(starBtn);
   var forkBtn = document.createElement('i');
   forkBtn.className = 'ti ti-git-fork'; forkBtn.title = 'Fork';
   forkBtn.style.cssText = 'font-size:11px;color:var(--color-text-secondary);cursor:pointer;';

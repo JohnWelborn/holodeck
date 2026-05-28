@@ -69,7 +69,6 @@ Confirm dialog — used for all destructive actions
 Message row actions (appear on hover):
 - Edit — opens an inline textarea pre-filled with the current text; saving pushes a new generation (same as Regenerate), Escape or Cancel closes without changes, Ctrl+Enter saves
 - Delete — removes the current generation; if others remain, switches to the previous one; if it was the only generation, removes the message entirely
-- Star — 🚧 placeholder, no handler
 - Fork — creates a new copy of the current program in the tree immediately below the original, keeping only messages up to and including the clicked one (all generation variants and current selection preserved). New program is named with a ` #N` suffix (e.g. "My Scene #1"), auto-incrementing to avoid collisions. Switches to the fork immediately.
 - Regenerate — re-calls the LLM with only the transcript up to this message; streams a new variant into the bubble
 - Prev / Next generation — navigate between variants; arrows dim at boundaries; counter (e.g. 2/3) hidden until 2+ generations exist
