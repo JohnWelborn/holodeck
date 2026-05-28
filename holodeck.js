@@ -1135,12 +1135,14 @@ function createMsgRow(participantId, text, isUserMsg) {
   deleteBtn.className = 'ti ti-trash'; deleteBtn.title = 'Delete';
   deleteBtn.style.cssText = 'font-size:11px;color:var(--color-text-secondary);cursor:pointer;';
   actions.appendChild(deleteBtn);
-  [['ti-star','Star'],['ti-git-fork','Fork']].forEach(function(ic){
-    var i = document.createElement('i');
-    i.className = 'ti ' + ic[0]; i.title = ic[1];
-    i.style.cssText = 'font-size:11px;color:var(--color-text-secondary);cursor:pointer;';
-    actions.appendChild(i);
-  });
+  var starBtn = document.createElement('i');
+  starBtn.className = 'ti ti-star'; starBtn.title = 'Star';
+  starBtn.style.cssText = 'font-size:11px;color:var(--color-text-secondary);cursor:pointer;';
+  actions.appendChild(starBtn);
+  var forkBtn = document.createElement('i');
+  forkBtn.className = 'ti ti-git-fork'; forkBtn.title = 'Fork';
+  forkBtn.style.cssText = 'font-size:11px;color:var(--color-text-secondary);cursor:pointer;';
+  actions.appendChild(forkBtn);
   var sep = document.createElement('span');
   sep.style.cssText = 'width:0.5px;height:10px;background:var(--color-border-secondary);display:inline-block;margin:0 3px;';
   actions.appendChild(sep);
@@ -1179,7 +1181,7 @@ function createMsgRow(participantId, text, isUserMsg) {
   content.appendChild(bubble);
   row.appendChild(content);
 
-  return { row: row, bubble: bubble, editBtn: editBtn, deleteBtn: deleteBtn, regenBtn: regenBtn, prevBtn: prevBtn, nextBtn: nextBtn, genCount: genCount };
+  return { row: row, bubble: bubble, editBtn: editBtn, deleteBtn: deleteBtn, regenBtn: regenBtn, prevBtn: prevBtn, nextBtn: nextBtn, genCount: genCount, forkBtn: forkBtn };
 }
 
 // ═══════════════════════════════════════════════════════════════════
@@ -1394,6 +1396,7 @@ function wireUpRegenButtons(msgResult, transcriptIdx) {
   var prevBtn    = msgResult.prevBtn;
   var nextBtn    = msgResult.nextBtn;
   var genCount   = msgResult.genCount;
+  var forkBtn    = msgResult.forkBtn;
 
   function refreshNavControls() {
     var entry = programState.transcript[transcriptIdx];
@@ -1455,6 +1458,10 @@ function wireUpRegenButtons(msgResult, transcriptIdx) {
   nextBtn.addEventListener('click', function() {
     var entry = programState.transcript[transcriptIdx];
     if (entry.currentGenIdx < entry.generations.length - 1) switchTo(entry.currentGenIdx + 1);
+  });
+
+  forkBtn.addEventListener('click', function() {
+    forkProgram(transcriptIdx);
   });
 }
 
@@ -2281,6 +2288,52 @@ function switchProgram(id) {
 
   renderTree();
   scheduleSave();
+}
+
+// ─── Fork program ──────────────────────────────────────────────────
+function generateForkName(baseName) {
+  var base = baseName.replace(/ #\d+$/, '');
+  var allNames = [];
+  function collect(arr) {
+    arr.forEach(function(item) {
+      if (item.type === 'program') allNames.push(item.name);
+      if (item.children) collect(item.children);
+    });
+  }
+  collect(treeData);
+  var n = 1;
+  while (allNames.indexOf(base + ' #' + n) !== -1) n++;
+  return base + ' #' + n;
+}
+
+function forkProgram(transcriptIdx) {
+  syncProgramStateToStore();
+  var src = programsStore[activeProgramId];
+  var srcItem = findItem(activeProgramId);
+  if (!src || !srcItem) return;
+
+  var newId = 'p-' + Date.now();
+  var newName = generateForkName(srcItem.name);
+
+  programsStore[newId] = JSON.parse(JSON.stringify({
+    environments:       src.environments,
+    scenarios:          src.scenarios,
+    participants:       src.participants,
+    userPersonaId:      src.userPersonaId,
+    transcript:         src.transcript.slice(0, transcriptIdx + 1),
+    autoMode:           src.autoMode,
+    replyLength:        src.replyLength,
+    systemPromptBase:   src.systemPromptBase,
+    closingInstruction: src.closingInstruction,
+    contentPolicy:      src.contentPolicy,
+  }));
+
+  var newItem = { id: newId, type: 'program', name: newName };
+  if (!insertItem(newItem, activeProgramId, 'after')) {
+    treeData.push(newItem);
+  }
+
+  switchProgram(newId);
 }
 
 // ─── Create program ────────────────────────────────────────────────
