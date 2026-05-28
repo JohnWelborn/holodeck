@@ -78,10 +78,12 @@ Input:
 - Textarea — auto-height; Enter sends, Shift+Enter newline, ArrowUp navigates suggestions
 - Send button
 - Collapse toggle — a ⌄/⌃ button after Send collapses or expands the row above the textarea containing the persona chip and all four mode buttons; when collapsed, Send also hides (use Enter to send); starts expanded
+- Layout: left side of the extra-buttons row holds persona chip, CYOA, Expand, and Describe; right side (pushed by flex spacer) holds Reply Length and Auto-reply mode
 
 Modes:
 - Choose your own adventure — generates clickable suggestion options after each message
 - Expand / Wand — expands draft text via LLM, presents result as a suggestion
+- Describe / Eye — opens a dialog pre-filled with "Describe the scene from {active persona}'s point of view"; user can edit before sending; prompts the LLM with the full scene context and the instruction; response appears as a special "Scene" message (eye icon, italic text, no character) stored in the transcript as `type:'description'`; included in future character prompts as `[Scene]: <text>` in the transcript section; supports regen/edit/delete like regular messages
 - Auto — bolt button opens a popup to select one of three auto-play modes:
   - Manual Trigger — no automation; characters only respond when manually triggered via ▶
   - AI Choice — after each user message, an LLM call picks which AI participant speaks next and triggers them

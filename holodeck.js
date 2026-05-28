@@ -1038,6 +1038,7 @@ function buildPrompt(targetId, transcriptOverride) {
     return msg.presentCharacters.indexOf(targetId) !== -1;
   });
   var transcriptText = filteredTranscript.map(function(msg){
+    if (msg.type === 'description') return '[Scene]: ' + msg.text;
     return msg.speakerName + ': ' + msg.text;
   }).join('\n\n');
 
@@ -1078,6 +1079,12 @@ function renderTranscript() {
   mc.innerHTML = '';
   programState.transcript.forEach(function(msg, idx) {
     if (!msg.generations) { msg.generations = [msg.text]; msg.currentGenIdx = 0; }
+    if (msg.type === 'description') {
+      var result = createDescriptionMsgRow(msg.text);
+      mc.appendChild(result.row);
+      wireUpRegenButtons(result, idx);
+      return;
+    }
     var isUser = msg.participantId === programState.userPersonaId;
     var result = createMsgRow(msg.participantId, msg.text, isUser);
     mc.appendChild(result.row);
@@ -1568,17 +1575,21 @@ async function regenerateMessage(transcriptIdx, msgResult, refreshNavControls) {
   setApiStatus('');
 
   var entry    = programState.transcript[transcriptIdx];
-  var targetId = entry.participantId;
   var prevContent = msgResult.bubble.innerHTML;
-
-  var limitedTranscript = programState.transcript.slice(0, transcriptIdx);
-  var prompt = buildPrompt(targetId, limitedTranscript);
 
   var container = document.getElementById('messages-container');
   msgResult.bubble.innerHTML = '<span class="thinking-dot"></span><span class="thinking-dot"></span><span class="thinking-dot"></span>';
 
+  var isDescription = entry.type === 'description';
+  var limitedTranscript = programState.transcript.slice(0, transcriptIdx);
+  var prompt = isDescription
+    ? buildDescribePrompt(entry.instruction || 'Describe the scene', limitedTranscript)
+    : buildPrompt(entry.participantId, limitedTranscript);
+
   try {
-    var fullText = await streamCompletion(targetId, prompt, msgResult.bubble, container);
+    var fullText = isDescription
+      ? await streamNarratorCompletion(prompt, msgResult.bubble, container)
+      : await streamCompletion(entry.participantId, prompt, msgResult.bubble, container);
     if (fullText !== null) {
       entry.generations.push(fullText);
       entry.currentGenIdx = entry.generations.length - 1;
@@ -2075,6 +2086,276 @@ async function triggerExpand() {
   } finally {
     isSuggesting = false;
   }
+}
+
+// ═══════════════════════════════════════════════════════════════════
+//  DESCRIBE
+// ═══════════════════════════════════════════════════════════════════
+function openDescribeDialog() {
+  var userId = programState.userPersonaId;
+  var persona = userId && programState.participants[userId];
+  var defaultText = persona
+    ? 'Describe what ' + persona.displayName + ' can currently see.'
+    : 'Describe the current scene.';
+  var input = document.getElementById('describe-input');
+  input.value = defaultText;
+  document.getElementById('describe-overlay').style.display = 'block';
+  document.getElementById('describe-box').style.display = 'flex';
+  input.focus();
+  input.select();
+}
+
+function closeDescribeDialog() {
+  document.getElementById('describe-overlay').style.display = 'none';
+  document.getElementById('describe-box').style.display = 'none';
+}
+
+function buildDescribePrompt(instruction, transcriptOverride) {
+  var envText = programState.environments.map(function(e){
+    return e.name + ' — ' + e.description;
+  }).join('\n\n');
+
+  var scenText = programState.scenarios.map(function(s){
+    return s.name + ' — ' + s.description;
+  }).join('\n\n');
+
+  var sourceTranscript = transcriptOverride !== undefined ? transcriptOverride : programState.transcript;
+  var transcriptText = sourceTranscript.map(function(msg){
+    if (msg.type === 'description') return '[Scene]: ' + msg.text;
+    return msg.speakerName + ': ' + msg.text;
+  }).join('\n\n');
+
+  var contentPolicyText = programState.contentPolicy !== undefined ? programState.contentPolicy : DEFAULT_CONTENT_POLICY;
+  var systemPrompt = 'You are the narrator of a collaborative fiction. Write a static snapshot of the current scene — where characters are, what they look like, the atmosphere and physical space. Do NOT advance the story. Do NOT have characters perform new actions or speak. Do NOT recap past events. This is a description of this exact frozen moment, nothing more.'
+    + (contentPolicyText ? '\n\n' + contentPolicyText : '');
+
+  var lastMsg = sourceTranscript.length > 0 ? sourceTranscript[sourceTranscript.length - 1] : null;
+  var lastMsgText = lastMsg
+    ? (lastMsg.type === 'description' ? '[Scene]: ' + lastMsg.text : lastMsg.speakerName + ': ' + lastMsg.text)
+    : '';
+
+  var userMessage = [
+    '## Environment', envText, '',
+    '## Scenario', scenText, '',
+    '## Scene so far (context only — do not continue)', transcriptText, '',
+    '## Most recent moment (most important for what is currently happening)', lastMsgText, '',
+    '---',
+    instruction
+  ].join('\n');
+
+  return { systemPrompt: systemPrompt, userMessage: userMessage };
+}
+
+async function streamNarratorCompletion(prompt, bubble, container) {
+  var url = apiEndpoint();
+  var headers = buildHeaders();
+  var requestBody = {
+    model: apiSettings.model,
+    messages: [
+      { role:'system', content:prompt.systemPrompt },
+      { role:'user',   content:prompt.userMessage  }
+    ],
+    temperature: 0.85,
+    max_tokens: Math.max(replyLengthTokens[replyLength] || 450, 1000),
+    top_p: 0.95,
+    frequency_penalty: 0.1,
+    presence_penalty: 0.1,
+    stream: true
+  };
+
+  console.group('%c[Holodeck] API Request → Narrator', 'color:#56c99a;font-weight:bold;');
+  console.log('%cURL', 'color:#888', url);
+  console.log('%cHeaders', 'color:#888', redactHeaders(headers));
+  console.log('%cRequest body', 'color:#888', requestBody);
+  console.log('%cSystem Prompt', 'color:#888', prompt.systemPrompt);
+  console.log('%cUser Message', 'color:#888', prompt.userMessage);
+
+  try {
+    var response = await fetch(url, {
+      method:'POST', headers: headers,
+      body: JSON.stringify(requestBody)
+    });
+    if (!response.ok) {
+      var errBody = await response.text().catch(function(){ return ''; });
+      console.log('%cResponse (error)', 'color:#d97070', errBody);
+      throw new Error('HTTP ' + response.status + (errBody ? ': ' + errBody.slice(0,160) : ''));
+    }
+
+    var reader  = response.body.getReader();
+    var decoder = new TextDecoder();
+    var fullText = ''; var started = false; var buffer = '';
+    var finishReason = null;
+
+    while (true) {
+      var chunk = await reader.read();
+      if (chunk.done) break;
+      buffer += decoder.decode(chunk.value, { stream:true });
+      var lines = buffer.split('\n');
+      buffer = lines.pop();
+      for (var i = 0; i < lines.length; i++) {
+        var line = lines[i].trim();
+        if (!line.startsWith('data: ')) continue;
+        var data = line.slice(6).trim();
+        if (data === '[DONE]') continue;
+        try {
+          var parsed = JSON.parse(data);
+          var choice = parsed.choices && parsed.choices[0];
+          var delta  = choice && choice.delta && choice.delta.content;
+          if (choice && choice.finish_reason) finishReason = choice.finish_reason;
+          if (delta) {
+            if (!started) { bubble.textContent = ''; started = true; }
+            fullText += delta;
+            bubble.textContent = fullText;
+            container.scrollTop = container.scrollHeight;
+          }
+        } catch(e) { /* skip malformed SSE lines */ }
+      }
+    }
+
+    console.log('%cResponse text', 'color:#888', fullText);
+    console.log('%cfinish_reason', 'color:#888', finishReason);
+
+    if (!started || !fullText.trim()) {
+      bubble.innerHTML = '<span style="color:var(--color-text-tertiary);font-style:italic;">No response generated.</span>';
+      return null;
+    }
+
+    bubble.innerHTML = renderDialogue(fullText.trim());
+    if (finishReason === 'length') {
+      var warn = document.createElement('div');
+      warn.style.cssText = 'margin-top:6px;font-size:11px;color:#d4956a;font-style:italic;';
+      warn.textContent = '⚠ Reply was cut off (max_tokens reached).';
+      bubble.appendChild(warn);
+    }
+    return fullText.trim();
+  } finally {
+    console.groupEnd();
+  }
+}
+
+async function sendDescribePrompt() {
+  var inputEl = document.getElementById('describe-input');
+  var instruction = inputEl.value.trim();
+  if (!instruction || isGenerating) return;
+
+  closeDescribeDialog();
+
+  var container = document.getElementById('messages-container');
+  var msgResult = createDescriptionMsgRow('');
+  msgResult.bubble.innerHTML = '<span class="thinking-dot"></span><span class="thinking-dot"></span><span class="thinking-dot"></span>';
+  container.appendChild(msgResult.row);
+  container.scrollTop = container.scrollHeight;
+
+  isGenerating = true;
+  setTriggerButtonsDisabled(true);
+  setApiStatus('');
+
+  var prompt = buildDescribePrompt(instruction);
+
+  try {
+    var fullText = await streamNarratorCompletion(prompt, msgResult.bubble, container);
+    if (fullText !== null) {
+      programState.transcript.push({
+        type: 'description',
+        instruction: instruction,
+        text: fullText,
+        presentCharacters: currentPresentIds(),
+        generations: [fullText],
+        currentGenIdx: 0
+      });
+      wireUpRegenButtons(msgResult, programState.transcript.length - 1);
+    }
+  } catch(err) {
+    console.error('[Holodeck] Describe error:', err);
+    msgResult.bubble.innerHTML = '<span style="color:#d97070;font-style:italic;">Error: ' + escHtml(err.message) + '</span>';
+    setApiStatus('✗ ' + err.message, '#d97070');
+  } finally {
+    isGenerating = false;
+    setTriggerButtonsDisabled(false);
+    scheduleSave();
+  }
+}
+
+function createDescriptionMsgRow(text) {
+  var row = document.createElement('div');
+  row.className = 'msg-row';
+  row.style.cssText = 'display:flex;gap:10px;align-items:flex-start;';
+
+  var awrap = document.createElement('div'); awrap.style.flexShrink = '0';
+  var av = document.createElement('div'); av.className = 'av';
+  av.style.cssText = 'width:30px;height:30px;background:var(--color-background-secondary);border:0.5px solid var(--color-border-tertiary);display:flex;align-items:center;justify-content:center;';
+  var icon = document.createElement('i');
+  icon.className = 'ti ti-eye';
+  icon.style.cssText = 'font-size:13px;color:var(--color-text-secondary);';
+  av.appendChild(icon);
+  awrap.appendChild(av);
+  row.appendChild(awrap);
+
+  var content = document.createElement('div'); content.style.minWidth = '0';
+  var nameRow = document.createElement('div');
+  nameRow.style.cssText = 'display:flex;align-items:center;gap:5px;margin-bottom:3px;';
+  var nspan = document.createElement('span');
+  nspan.textContent = 'Scene';
+  nspan.style.cssText = 'font-size:11px;color:var(--color-text-secondary);font-style:italic;';
+  nameRow.appendChild(nspan);
+
+  var actions = document.createElement('div');
+  actions.className = 'msg-actions';
+  actions.style.cssText = 'display:none;align-items:center;gap:6px;';
+  var editBtn = document.createElement('i');
+  editBtn.className = 'ti ti-pencil'; editBtn.title = 'Edit';
+  editBtn.style.cssText = 'font-size:11px;color:var(--color-text-secondary);cursor:pointer;';
+  actions.appendChild(editBtn);
+  var deleteBtn = document.createElement('i');
+  deleteBtn.className = 'ti ti-trash'; deleteBtn.title = 'Delete';
+  deleteBtn.style.cssText = 'font-size:11px;color:var(--color-text-secondary);cursor:pointer;';
+  actions.appendChild(deleteBtn);
+  var starBtn = document.createElement('i');
+  starBtn.className = 'ti ti-star'; starBtn.title = 'Star';
+  starBtn.style.cssText = 'font-size:11px;color:var(--color-text-secondary);cursor:pointer;';
+  actions.appendChild(starBtn);
+  var forkBtn = document.createElement('i');
+  forkBtn.className = 'ti ti-git-fork'; forkBtn.title = 'Fork';
+  forkBtn.style.cssText = 'font-size:11px;color:var(--color-text-secondary);cursor:pointer;';
+  actions.appendChild(forkBtn);
+  var sep = document.createElement('span');
+  sep.style.cssText = 'width:0.5px;height:10px;background:var(--color-border-secondary);display:inline-block;margin:0 3px;';
+  actions.appendChild(sep);
+  var regenBtn = document.createElement('i');
+  regenBtn.className = 'ti ti-refresh';
+  regenBtn.title = 'Re-describe';
+  regenBtn.style.cssText = 'font-size:11px;color:var(--color-text-secondary);cursor:pointer;';
+  actions.appendChild(regenBtn);
+  var prevBtn = document.createElement('i');
+  prevBtn.className = 'ti ti-chevron-left';
+  prevBtn.title = 'Previous generation';
+  prevBtn.style.cssText = 'font-size:10px;color:var(--color-text-secondary);cursor:pointer;display:none;';
+  actions.appendChild(prevBtn);
+  var genCount = document.createElement('span');
+  genCount.title = 'Generation 1 of 1';
+  genCount.style.cssText = 'font-size:10px;color:var(--color-text-secondary);cursor:default;user-select:none;white-space:nowrap;display:none;';
+  genCount.textContent = '1/1';
+  actions.appendChild(genCount);
+  var nextBtn = document.createElement('i');
+  nextBtn.className = 'ti ti-chevron-right';
+  nextBtn.title = 'Next generation';
+  nextBtn.style.cssText = 'font-size:10px;color:var(--color-text-secondary);cursor:pointer;display:none;';
+  actions.appendChild(nextBtn);
+  nameRow.appendChild(actions);
+  content.appendChild(nameRow);
+
+  var bubble = document.createElement('div');
+  bubble.style.cssText = [
+    'background:var(--color-background-secondary);',
+    'border-radius:0 10px 10px 10px;',
+    'padding:8px 12px;font-size:13px;line-height:1.65;',
+    'display:inline-block;white-space:pre-wrap;word-break:break-word;font-style:italic;'
+  ].join('');
+  if (text) bubble.innerHTML = renderDialogue(text);
+  content.appendChild(bubble);
+  row.appendChild(content);
+
+  return { row: row, bubble: bubble, editBtn: editBtn, deleteBtn: deleteBtn, regenBtn: regenBtn, prevBtn: prevBtn, nextBtn: nextBtn, genCount: genCount, forkBtn: forkBtn };
 }
 
 function showAutoModeMenu(event) {

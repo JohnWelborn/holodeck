@@ -213,6 +213,10 @@
           <button id="expand-btn" onclick="triggerExpand()" title="Expand what I've typed" style="border:0.5px solid var(--color-border-secondary);border-radius:var(--border-radius-md);width:34px;height:34px;display:flex;align-items:center;justify-content:center;color:var(--color-text-secondary);flex-shrink:0;">
             <i class="ti ti-wand" style="font-size:15px;"></i>
           </button>
+          <button id="describe-btn" onclick="openDescribeDialog()" title="Describe the scene" style="border:0.5px solid var(--color-border-secondary);border-radius:var(--border-radius-md);width:34px;height:34px;display:flex;align-items:center;justify-content:center;color:var(--color-text-secondary);flex-shrink:0;">
+            <i class="ti ti-eye" style="font-size:15px;"></i>
+          </button>
+          <div style="flex:1;"></div>
           <button id="reply-length-btn" onclick="showReplyLengthMenu(event)" title="Reply length" class="mode-btn-active" style="border:0.5px solid var(--color-border-secondary);border-radius:var(--border-radius-md);width:34px;height:34px;display:flex;align-items:center;justify-content:center;color:var(--color-text-secondary);flex-shrink:0;">
             <i class="ti ti-text-size" style="font-size:15px;"></i>
           </button>
@@ -302,6 +306,25 @@
   <div class="auto-mode-item" data-mode="manual" onclick="setAutoMode('manual')">Manual Trigger</div>
   <div class="auto-mode-item auto-mode-item-active" data-mode="ai-choice" onclick="setAutoMode('ai-choice')">AI Choice</div>
   <div class="auto-mode-item" data-mode="everyone" onclick="setAutoMode('everyone')">Everyone Gets Turn</div>
+</div>
+
+<!-- ─── Describe Dialog ────────────────────────────────────────────── -->
+<div class="modal-overlay" id="describe-overlay" style="z-index:500;" onclick="closeDescribeDialog()"></div>
+<div class="modal-box" id="describe-box" style="width:420px;z-index:501;">
+  <div class="modal-header">
+    <div class="modal-title">Describe</div>
+    <button onclick="closeDescribeDialog()" style="color:var(--color-text-secondary);display:flex;align-items:center;padding:2px;">
+      <i class="ti ti-x" style="font-size:15px;"></i>
+    </button>
+  </div>
+  <div class="modal-body" style="padding:14px 18px;">
+    <textarea id="describe-input" rows="3" style="width:100%;resize:vertical;font-size:13px;padding:8px 10px;background:var(--color-background-secondary);border:0.5px solid var(--color-border-secondary);border-radius:var(--border-radius-md);color:var(--color-text-primary);box-sizing:border-box;"></textarea>
+  </div>
+  <div class="modal-footer" style="display:flex;">
+    <div class="modal-footer-note" id="describe-status"></div>
+    <button class="btn-ghost" onclick="closeDescribeDialog()">Cancel</button>
+    <button class="btn-primary" onclick="sendDescribePrompt()">Send</button>
+  </div>
 </div>
 
 <script src="holodeck-data.js"></script>
