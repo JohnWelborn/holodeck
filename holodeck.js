@@ -2038,6 +2038,28 @@ async function callSuggestionApi(prompt, temperature, maxTokens) {
   return JSON.parse(repairJson(merged).result);
 }
 
+async function callCompletionApi(prompt) {
+  var response = await fetch(apiEndpoint(), {
+    method: 'POST', headers: buildHeaders(),
+    body: JSON.stringify({
+      model: apiSettings.model,
+      messages: [
+        { role: 'system', content: prompt.systemPrompt },
+        { role: 'user',   content: prompt.userMessage  }
+      ],
+      temperature: 0.85,
+      max_tokens: replyLengthTokens[replyLength] || 450,
+      top_p: 0.95,
+      frequency_penalty: 0.1,
+      presence_penalty: 0.1
+    })
+  });
+  if (!response.ok) throw new Error('HTTP ' + response.status);
+  var data = await response.json();
+  var content = data.choices && data.choices[0] && data.choices[0].message && data.choices[0].message.content;
+  return content ? content.trim() : null;
+}
+
 // ═══════════════════════════════════════════════════════════════════
 //  INPUT ASSIST MODES
 // ═══════════════════════════════════════════════════════════════════
@@ -2055,10 +2077,15 @@ async function generateCYOASuggestions() {
   isSuggesting = true;
   showSuggestionsLoading('Thinking…');
   try {
-    var prompt = buildUserSuggestionPrompt(userId, 3);
-    var items = await callSuggestionApi(prompt, 0.9, 400);
-    if (!Array.isArray(items)) throw new Error('Expected array');
-    renderSuggestions(items.slice(0, 3));
+    var prompt = buildPrompt(userId);
+    var results = await Promise.all([
+      callCompletionApi(prompt),
+      callCompletionApi(prompt),
+      callCompletionApi(prompt)
+    ]);
+    var items = results.filter(Boolean);
+    if (items.length === 0) throw new Error('No responses generated');
+    renderSuggestions(items);
   } catch (err) {
     console.error('[Holodeck] choose your own adventure error:', err);
     clearSuggestions();
