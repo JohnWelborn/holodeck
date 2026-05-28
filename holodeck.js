@@ -1899,12 +1899,16 @@ function renderSuggestions(items) {
     area.appendChild(btn);
   });
   area.style.display = 'flex';
+  var mc = document.getElementById('messages-container');
+  if (mc) mc.scrollTop = mc.scrollHeight;
 }
 
 function showSuggestionsLoading(msg) {
   var area = document.getElementById('suggestions-area');
   area.innerHTML = '<div style="font-size:12px;color:var(--color-text-tertiary);padding:2px 0;font-style:italic;">' + escHtml(msg) + '</div>';
   area.style.display = 'flex';
+  var mc = document.getElementById('messages-container');
+  if (mc) mc.scrollTop = mc.scrollHeight;
 }
 
 // ═══════════════════════════════════════════════════════════════════
