@@ -80,7 +80,7 @@ Input:
 - Collapse toggle — a ⌄/⌃ button after Send collapses or expands the row above the textarea containing the persona chip and all four mode buttons; when collapsed, Send also hides (use Enter to send); starts expanded
 
 Modes:
-- CYOA — generates clickable suggestion options after each message
+- Choose your own adventure — generates clickable suggestion options after each message
 - Expand / Wand — expands draft text via LLM, presents result as a suggestion
 - Auto — bolt button opens a popup to select one of three auto-play modes:
   - Manual Trigger — no automation; characters only respond when manually triggered via ▶

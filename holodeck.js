@@ -1298,8 +1298,8 @@ async function triggerCharacter(targetId) {
     isGenerating = false;
     setTriggerButtonsDisabled(false);
     scheduleSave();
-    if (cyoaMode && autoMode === 'manual') generateCYOASuggestions();
     runAutoMode();
+    if (cyoaMode && !isGenerating) generateCYOASuggestions();
   }
 }
 
@@ -1835,7 +1835,6 @@ function sendText(text) {
   wireUpRegenButtons(result, programState.transcript.length - 1);
   container.scrollTop = container.scrollHeight;
   scheduleSave();
-  if (cyoaMode) generateCYOASuggestions();
   if (autoMode === 'everyone') initEveryoneRound();
   if (autoMode === 'ai-choice') triggerAiChoice();
 }
@@ -2015,7 +2014,11 @@ async function callSuggestionApi(prompt, temperature, maxTokens) {
   var start = content.indexOf('[');
   var end   = content.lastIndexOf(']');
   if (start === -1 || end === -1 || end <= start) throw new Error('No JSON array in response');
-  return JSON.parse(content.slice(start, end + 1));
+  var slice = content.slice(start, end + 1);
+  console.log('[choose your own adventure raw]', slice);
+  try { return JSON.parse(slice); } catch (_) {}
+  try { return JSON.parse(repairJson(slice).result); } catch (_) {}
+  return JSON.parse(slice.replace(/\]\s*\[/g, ','));
 }
 
 // ═══════════════════════════════════════════════════════════════════
@@ -2040,7 +2043,7 @@ async function generateCYOASuggestions() {
     if (!Array.isArray(items)) throw new Error('Expected array');
     renderSuggestions(items.slice(0, 3));
   } catch (err) {
-    console.error('[Holodeck] CYOA error:', err);
+    console.error('[Holodeck] choose your own adventure error:', err);
     clearSuggestions();
   } finally {
     isSuggesting = false;

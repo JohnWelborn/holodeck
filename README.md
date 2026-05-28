@@ -33,7 +33,7 @@ Alternatively, open `holodeck.html` directly — API settings can be entered in 
 - Programs: named scenes with participants, environments, and scenarios
 - AI program generation from a premise
 - Message editing, regeneration, and generation history
-- CYOA suggestions, auto-advance, and text expansion modes
+- Choose your own adventure suggestions, auto-advance, and text expansion modes
 - Presence toggling — characters entering/leaving the scene filter context accordingly
 - Export/import/reset for full session persistence
 - PG-13 content filter toggle
