@@ -2548,9 +2548,11 @@ function submitAIBrief() {
     console.group('%c[Holodeck] AI Program Generation → response', 'color:#56c99a;font-weight:bold;');
     console.log('%cRaw response', 'color:#888', raw);
     console.groupEnd();
-    var cleaned = raw.trim().replace(/^```json\s*/i, '').replace(/^```\s*/i, '').replace(/\s*```$/i, '').trim();
+    var start = raw.indexOf('{');
+    var end   = raw.lastIndexOf('}');
+    if (start === -1 || end === -1 || end <= start) { throw new Error('No JSON object found in response. Try again.'); }
     var generated;
-    try { generated = JSON.parse(cleaned); }
+    try { generated = JSON.parse(raw.slice(start, end + 1)); }
     catch(e) { throw new Error('Could not parse the generated JSON. Try simplifying your prompt or try again.'); }
     applyGeneratedProgram(generated, _newProgramParentId);
   })
