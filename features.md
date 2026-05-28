@@ -77,6 +77,7 @@ Input:
 - Persona chip — shows active speaker; click cycles to next participant
 - Textarea — auto-height; Enter sends, Shift+Enter newline, ArrowUp navigates suggestions
 - Send button
+- Collapse toggle — a ⌄/⌃ button after Send collapses or expands the row above the textarea containing the persona chip and all four mode buttons; when collapsed, Send also hides (use Enter to send); starts expanded
 
 Modes:
 - CYOA — generates clickable suggestion options after each message

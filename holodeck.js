@@ -2988,10 +2988,26 @@ function importData() {
   input.click();
 }
 
+function _applyMoreButtonsState(open) {
+  var extraRow = document.getElementById('extra-btns-row');
+  var sendBtn  = document.getElementById('send-btn');
+  var icon     = document.getElementById('more-btn-icon');
+  extraRow.style.display = open ? 'flex' : 'none';
+  sendBtn.style.display  = open ? 'flex' : 'none';
+  icon.className = open ? 'ti ti-chevron-down' : 'ti ti-chevron-up';
+}
+
+function toggleMoreButtons() {
+  var open = document.getElementById('extra-btns-row').style.display === 'none';
+  _applyMoreButtonsState(open);
+  localStorage.setItem('extraBtnsOpen', open ? '1' : '0');
+}
+
 // ═══════════════════════════════════════════════════════════════════
 //  INIT
 // ═══════════════════════════════════════════════════════════════════
 initReplyLengthLabels();
+_applyMoreButtonsState(localStorage.getItem('extraBtnsOpen') !== '0');
 loadFromStorage();
 backfillTranscriptPresence();
 renderTree();
