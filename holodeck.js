@@ -1658,31 +1658,12 @@ function renderParticipants() {
     }
     row.appendChild(av);
 
-    // Info: name + role row
+    // Info: name only (role moves to its own row below)
     var info = document.createElement('div'); info.style.cssText = 'flex:1;min-width:0;';
     var nd = document.createElement('div');
     nd.style.cssText = 'font-size:12px;font-weight:500;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;' + (isUser?'color:var(--active-color);':'');
     nd.textContent = p.displayName + (isUser ? ' (you)' : '');
-
-    // Role row: role text + add-trait "+" button
-    var roleRow = document.createElement('div');
-    roleRow.style.cssText = 'display:flex;align-items:center;gap:3px;';
-    var rd = document.createElement('div');
-    rd.style.cssText = 'font-size:10px;color:var(--color-text-secondary);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;';
-    rd.textContent = p.role;
-    roleRow.appendChild(rd);
-
-    var addTraitBtn = document.createElement('button');
-    addTraitBtn.title = 'Add trait';
-    addTraitBtn.style.cssText = 'color:var(--color-text-tertiary);padding:0 2px;display:flex;align-items:center;flex-shrink:0;line-height:1;';
-    addTraitBtn.innerHTML = '<i class="ti ti-plus" style="font-size:9px;"></i>';
-    addTraitBtn.onmouseenter = function(){ this.style.color = 'var(--color-text-secondary)'; };
-    addTraitBtn.onmouseleave = function(){ this.style.color = 'var(--color-text-tertiary)'; };
-    addTraitBtn.onclick = (function(k){ return function(){ openTraitModal(k); }; })(id);
-    roleRow.appendChild(addTraitBtn);
-
     info.appendChild(nd);
-    info.appendChild(roleRow);
     row.appendChild(info);
 
     // Eye
@@ -1705,6 +1686,14 @@ function renderParticipants() {
     trigI.className = 'ti ti-player-play'; trigI.style.fontSize = '12px';
     trigBtn.appendChild(trigI);
     row.appendChild(trigBtn);
+
+    // Edit participant
+    var editBtn = document.createElement('button');
+    editBtn.title = 'Edit ' + p.displayName;
+    editBtn.style.cssText = 'color:var(--color-text-secondary);padding:2px;flex-shrink:0;display:flex;align-items:center;';
+    editBtn.innerHTML = '<i class="ti ti-pencil" style="font-size:12px;"></i>';
+    editBtn.onclick = (function(k){ return function(){ openModal('participant', k); }; })(id);
+    row.appendChild(editBtn);
 
     // Speak-as
     var speakBtn = document.createElement('button');
@@ -1737,6 +1726,24 @@ function renderParticipants() {
     row.appendChild(removeBtn);
 
     wrapper.appendChild(row);
+
+    // ── Description row: role text + add-trait button ───────────────
+    var descRow = document.createElement('div');
+    descRow.style.cssText = 'display:flex;align-items:center;gap:3px;padding-left:31px;margin-top:1px;';
+    var rd = document.createElement('div');
+    rd.style.cssText = 'font-size:10px;color:var(--color-text-secondary);';
+    rd.textContent = p.role;
+    descRow.appendChild(rd);
+
+    var addTraitBtn = document.createElement('button');
+    addTraitBtn.title = 'Add trait';
+    addTraitBtn.style.cssText = 'color:var(--color-text-tertiary);padding:0 2px;display:flex;align-items:center;flex-shrink:0;line-height:1;';
+    addTraitBtn.innerHTML = '<i class="ti ti-plus" style="font-size:9px;"></i>';
+    addTraitBtn.onmouseenter = function(){ this.style.color = 'var(--color-text-secondary)'; };
+    addTraitBtn.onmouseleave = function(){ this.style.color = 'var(--color-text-tertiary)'; };
+    addTraitBtn.onclick = (function(k){ return function(){ openTraitModal(k); }; })(id);
+    descRow.appendChild(addTraitBtn);
+    wrapper.appendChild(descRow);
 
     // ── Traits row ─────────────────────────────────────────────────
     if (traits.length > 0) {
