@@ -168,6 +168,10 @@
       <label class="setting-label" for="api-token">API Token</label>
       <input class="setting-input" id="api-token" type="password" placeholder="sk-…" autocomplete="off" oninput="updateApiSettings()">
     </div>
+    <div style="margin-bottom:10px;">
+      <label class="setting-label" for="api-max-tokens">Max tokens</label>
+      <input class="setting-input" id="api-max-tokens" type="number" placeholder="1500" oninput="updateApiSettings()">
+    </div>
     <button id="test-connection-btn" onclick="testConnection()" class="btn-primary" style="width:100%;padding:6px 12px;font-size:12px;margin-top:2px;">Test Connection</button>
     <div class="api-status" id="api-status" style="color:var(--color-text-tertiary);"></div>
     <div style="margin-top:14px;padding-top:12px;border-top:0.5px solid var(--color-border-tertiary);display:flex;flex-direction:column;gap:6px;">
@@ -295,11 +299,11 @@
 </div>
 
 <div id="reply-length-menu" style="display:none;position:fixed;z-index:300;">
-  <div class="auto-mode-item" data-len="sentence" onclick="setReplyLength('sentence')">One sentence <span class="reply-length-tokens" style="opacity:.5"></span></div>
-  <div class="auto-mode-item auto-mode-item-active" data-len="few" onclick="setReplyLength('few')">A few sentences <span class="reply-length-tokens" style="opacity:.5"></span></div>
-  <div class="auto-mode-item" data-len="short-para" onclick="setReplyLength('short-para')">Short paragraph <span class="reply-length-tokens" style="opacity:.5"></span></div>
-  <div class="auto-mode-item" data-len="para" onclick="setReplyLength('para')">Full paragraph <span class="reply-length-tokens" style="opacity:.5"></span></div>
-  <div class="auto-mode-item" data-len="full" onclick="setReplyLength('full')">Full response <span class="reply-length-tokens" style="opacity:.5"></span></div>
+  <div class="auto-mode-item" data-len="sentence" onclick="setReplyLength('sentence')">One sentence</div>
+  <div class="auto-mode-item auto-mode-item-active" data-len="few" onclick="setReplyLength('few')">A few sentences</div>
+  <div class="auto-mode-item" data-len="short-para" onclick="setReplyLength('short-para')">Short paragraph</div>
+  <div class="auto-mode-item" data-len="para" onclick="setReplyLength('para')">Full paragraph</div>
+  <div class="auto-mode-item" data-len="full" onclick="setReplyLength('full')">Full response</div>
 </div>
 
 <div id="auto-mode-menu" style="display:none;position:fixed;z-index:300;">

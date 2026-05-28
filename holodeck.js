@@ -20,15 +20,17 @@ function genId(prefix) { return prefix + '-' + Date.now(); }
 // ═══════════════════════════════════════════════════════════════════
 //  API SETTINGS
 // ═══════════════════════════════════════════════════════════════════
-var apiSettings = { baseUrl: 'http://localhost:1337/v1', model: 'mistral-v7-tekken', token: '', censor: true };
+var apiSettings = { baseUrl: 'http://localhost:1337/v1', model: 'mistral-v7-tekken', token: '', censor: true, maxTokens: 1500 };
 if (new URLSearchParams(location.search).get('censor') === 'false') apiSettings.censor = false;
-document.getElementById('api-url').value   = apiSettings.baseUrl;
-document.getElementById('api-model').value = apiSettings.model;
-document.getElementById('api-token').value = apiSettings.token;
+document.getElementById('api-url').value        = apiSettings.baseUrl;
+document.getElementById('api-model').value      = apiSettings.model;
+document.getElementById('api-token').value      = apiSettings.token;
+document.getElementById('api-max-tokens').value = apiSettings.maxTokens;
 function updateApiSettings() {
-  apiSettings.baseUrl = document.getElementById('api-url').value.trim() || 'http://localhost:1337/v1';
-  apiSettings.model   = document.getElementById('api-model').value.trim() || 'mistral-v7-tekken';
-  apiSettings.token   = document.getElementById('api-token').value.trim();
+  apiSettings.baseUrl    = document.getElementById('api-url').value.trim() || 'http://localhost:1337/v1';
+  apiSettings.model      = document.getElementById('api-model').value.trim() || 'mistral-v7-tekken';
+  apiSettings.token      = document.getElementById('api-token').value.trim();
+  apiSettings.maxTokens  = parseInt(document.getElementById('api-max-tokens').value, 10) || 1500;
   scheduleSave();
 }
 var settingsOpen = false;
@@ -1321,7 +1323,7 @@ async function streamCompletion(targetId, prompt, bubble, container) {
       { role:'user',   content:prompt.userMessage  }
     ],
     temperature: 0.85,
-    max_tokens: replyLengthTokens[replyLength] || 450,
+    max_tokens: apiSettings.maxTokens,
     top_p: 0.95,
     frequency_penalty: 0.1,
     presence_penalty: 0.1,
@@ -2048,7 +2050,7 @@ async function callCompletionApi(prompt) {
         { role: 'user',   content: prompt.userMessage  }
       ],
       temperature: 0.85,
-      max_tokens: replyLengthTokens[replyLength] || 450,
+      max_tokens: apiSettings.maxTokens,
       top_p: 0.95,
       frequency_penalty: 0.1,
       presence_penalty: 0.1
@@ -2183,7 +2185,7 @@ async function streamNarratorCompletion(prompt, bubble, container) {
       { role:'user',   content:prompt.userMessage  }
     ],
     temperature: 0.85,
-    max_tokens: Math.max(replyLengthTokens[replyLength] || 450, 1000),
+    max_tokens: apiSettings.maxTokens,
     top_p: 0.95,
     frequency_penalty: 0.1,
     presence_penalty: 0.1,
@@ -2403,14 +2405,6 @@ function showAutoModeMenu(event) {
 
 var autoModeIcons = { 'manual': 'ti-bolt-off', 'ai-choice': 'ti-brain', 'everyone': 'ti-users' };
 
-var replyLengthTokens = {
-  'sentence':  150,
-  'few':       300,
-  'short-para':500,
-  'para':      750,
-  'full':     1500
-};
-
 var replyLengthInstructions = {
   'sentence':   '\nKeep your response to a single sentence.',
   'few':        '\nKeep your response to 2–3 sentences.',
@@ -2429,13 +2423,6 @@ function setAutoMode(mode) {
   document.getElementById('auto-mode-menu').style.display = 'none';
   document.querySelectorAll('#auto-mode-menu .auto-mode-item').forEach(function(el) {
     el.classList.toggle('auto-mode-item-active', el.dataset.mode === mode);
-  });
-}
-
-function initReplyLengthLabels() {
-  document.querySelectorAll('#reply-length-menu .auto-mode-item').forEach(function(el) {
-    var tokens = replyLengthTokens[el.dataset.len];
-    if (tokens) el.querySelector('.reply-length-tokens').textContent = '(' + tokens + ')';
   });
 }
 
@@ -3230,9 +3217,11 @@ function loadFromStorage() {
     }
     if (saved.apiSettings) {
       Object.assign(apiSettings, saved.apiSettings);
-      document.getElementById('api-url').value   = apiSettings.baseUrl;
-      document.getElementById('api-model').value = apiSettings.model;
-      document.getElementById('api-token').value = apiSettings.token;
+      if (!apiSettings.maxTokens) apiSettings.maxTokens = 1500;
+      document.getElementById('api-url').value        = apiSettings.baseUrl;
+      document.getElementById('api-model').value      = apiSettings.model;
+      document.getElementById('api-token').value      = apiSettings.token;
+      document.getElementById('api-max-tokens').value = apiSettings.maxTokens;
     }
     if (saved.activeProgramId && programsStore[saved.activeProgramId]) {
       activeProgramId = saved.activeProgramId;
@@ -3323,7 +3312,6 @@ function toggleMoreButtons() {
 // ═══════════════════════════════════════════════════════════════════
 //  INIT
 // ═══════════════════════════════════════════════════════════════════
-initReplyLengthLabels();
 _applyMoreButtonsState(localStorage.getItem('extraBtnsOpen') !== '0');
 loadFromStorage();
 backfillTranscriptPresence();
