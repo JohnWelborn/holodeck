@@ -1048,7 +1048,7 @@ function buildPrompt(targetId, transcriptOverride) {
   var contentPolicyText = programState.contentPolicy !== undefined ? programState.contentPolicy : DEFAULT_CONTENT_POLICY;
   var systemPrompt = template.replace(/\{name\}/g, target.displayName)
     + (contentPolicyText ? '\n\n' + contentPolicyText : '')
-    + (replyLengthInstructions[replyLength] || '');
+    + (replyLengthInstructions[cyoaMode && replyLength === 'full' ? 'para' : replyLength] || '');
 
   var characterSheet = [
     '## Your Character',
@@ -2406,11 +2406,11 @@ function showAutoModeMenu(event) {
 var autoModeIcons = { 'manual': 'ti-bolt-off', 'ai-choice': 'ti-brain', 'everyone': 'ti-users' };
 
 var replyLengthInstructions = {
-  'sentence':   '\nKeep your response to a single sentence.',
-  'few':        '\nKeep your response to 2–3 sentences.',
-  'short-para': '\nKeep your response to one short paragraph.',
-  'para':       '\nWrite one full paragraph.',
-  'full':       '\nWrite a full response — aim to fill the screen.'
+  'sentence':   '\n\n**Reply length:** Respond in a single short sentence — no more than 20 words.',
+  'few':        '\n\n**Reply length:** Keep your response brief — 2 to 3 sentences.',
+  'short-para': '\n\n**Reply length:** Keep your response to a short paragraph — 3 to 4 sentences.',
+  'para':       '\n\n**Reply length:** Write one paragraph of 5 to 7 sentences.',
+  'full':       '\n\n**Reply length:** Write a full, detailed response — multiple paragraphs if the moment calls for it.'
 };
 
 function setAutoMode(mode) {
