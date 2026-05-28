@@ -2479,6 +2479,69 @@ function toggleAIBriefTone(tone) {
   renderAIBriefTones();
 }
 
+// Repairs two common model JSON defects in one character walk:
+//   1. Mismatched brackets (] where } expected, or vice versa) — fixed by tracking open-bracket stack
+//   2. Unescaped double-quotes inside string values — escaped using a lookahead heuristic
+// Returns { result: string, repairs: string[] }
+function repairJson(str) {
+  var out = '';
+  var stack = [];   // open brackets/braces outside strings
+  var inString = false;
+  var repairs = [];
+  var i = 0;
+  while (i < str.length) {
+    var ch = str[i];
+    // Inside a string: handle escape sequences and detect embedded unescaped quotes
+    if (inString) {
+      if (ch === '\\') {
+        out += ch + (str[i + 1] || '');
+        i += 2;
+        continue;
+      }
+      if (ch === '"') {
+        // Lookahead: if next non-whitespace is a structural char, this closes the string
+        var j = i + 1;
+        while (j < str.length && (str[j] === ' ' || str[j] === '\t' || str[j] === '\n' || str[j] === '\r')) j++;
+        var nxt = str[j];
+        if (nxt === ',' || nxt === '}' || nxt === ']' || nxt === ':' || j >= str.length) {
+          inString = false;
+          out += ch;
+        } else {
+          out += '\\"';
+          repairs.push('escaped embedded quote at position ' + i);
+        }
+        i++;
+        continue;
+      }
+      out += ch;
+      i++;
+      continue;
+    }
+    // Outside strings
+    if (ch === '"') {
+      inString = true;
+      out += ch;
+    } else if (ch === '{' || ch === '[') {
+      stack.push(ch);
+      out += ch;
+    } else if (ch === '}' || ch === ']') {
+      var opener = stack.length ? stack[stack.length - 1] : null;
+      var expected = opener === '{' ? '}' : opener === '[' ? ']' : ch;
+      if (opener && ch !== expected) {
+        out += expected;
+        repairs.push('replaced ' + ch + ' with ' + expected + ' at position ' + i);
+      } else {
+        out += ch;
+      }
+      stack.pop();
+    } else {
+      out += ch;
+    }
+    i++;
+  }
+  return { result: out, repairs: repairs };
+}
+
 function buildAIBriefUserMessage(briefData) {
   var parts = [];
   if (briefData.premise)      { parts.push('Premise: ' + briefData.premise); }
@@ -2551,9 +2614,48 @@ function submitAIBrief() {
     var start = raw.indexOf('{');
     var end   = raw.lastIndexOf('}');
     if (start === -1 || end === -1 || end <= start) { throw new Error('No JSON object found in response. Try again.'); }
+    var slice = raw.slice(start, end + 1);
     var generated;
-    try { generated = JSON.parse(raw.slice(start, end + 1)); }
-    catch(e) { throw new Error('Could not parse the generated JSON. Try simplifying your prompt or try again.'); }
+    try { generated = JSON.parse(slice); }
+    catch(e) {
+      var parseLines = slice.split('\n');
+      var lineMatch = e.message.match(/line (\d+)/i);
+      var colMatch  = e.message.match(/column (\d+)/i);
+      var errLineNum = lineMatch ? parseInt(lineMatch[1]) : null;
+      var errCol     = colMatch  ? parseInt(colMatch[1])  : null;
+      var errLine    = errLineNum ? (parseLines[errLineNum - 1] || '') : '';
+      var pointer    = errCol ? (' '.repeat(errCol - 1) + '^') : '';
+
+      // Diagnose likely cause
+      var diagnosis = '';
+      var errChar = errLine[errCol - 1] || '';
+      if (errChar === ']') diagnosis = 'Wrong closing bracket: model used ] where } was expected (object vs array mismatch)';
+      else if (errChar === '}') diagnosis = 'Wrong closing bracket: model used } where ] was expected';
+      else if (errChar === '"') diagnosis = 'Unescaped double-quote inside a string value';
+      else if (errLine.trim() === '') diagnosis = 'Unexpected end of input or missing comma/bracket';
+
+      console.group('%c[Holodeck] JSON parse failed — ' + (diagnosis || e.message), 'color:#d97070;font-weight:bold;');
+      console.log('Error:', e.message);
+      if (errLineNum) {
+        var ctx = parseLines.slice(Math.max(0, errLineNum - 3), errLineNum + 2);
+        ctx.splice(Math.min(errLineNum - 1, 2) + 1, 0, pointer);
+        console.log('Near line ' + errLineNum + ':\n' + ctx.join('\n'));
+      }
+
+      var repaired = repairJson(slice);
+      if (repaired.repairs.length) {
+        console.log('Attempting repairs:', repaired.repairs);
+      }
+      try {
+        generated = JSON.parse(repaired.result);
+        console.info('Recovered after repairs:', repaired.repairs.join('; ') || 'none');
+        console.groupEnd();
+      } catch(e2) {
+        console.warn('Repair also failed:', e2.message);
+        console.groupEnd();
+        throw new Error('Could not parse the generated JSON: ' + (diagnosis || e2.message));
+      }
+    }
     applyGeneratedProgram(generated, _newProgramParentId);
   })
   .catch(function(err) {
