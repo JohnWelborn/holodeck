@@ -3213,7 +3213,7 @@ function saveToStorage() {
       library: library,
       programsStore: programsStore,
       treeData: treeData,
-      apiSettings: apiSettings,
+      apiSettings: { baseUrl: apiSettings.baseUrl, model: apiSettings.model, token: apiSettings.token, maxTokens: apiSettings.maxTokens },
       activeProgramId: activeProgramId
     }));
   } catch(e) {
@@ -3261,12 +3261,16 @@ function loadFromStorage() {
     if (saved.activeProgramId && programsStore[saved.activeProgramId]) {
       activeProgramId = saved.activeProgramId;
       var d = programsStore[activeProgramId];
-      programState.environments  = JSON.parse(JSON.stringify(d.environments  || []));
-      programState.scenarios     = JSON.parse(JSON.stringify(d.scenarios     || []));
-      programState.participants  = JSON.parse(JSON.stringify(d.participants  || {}));
-      programState.userPersonaId = d.userPersonaId || null;
-      programState.transcript    = JSON.parse(JSON.stringify(d.transcript    || []));
+      programState.environments        = JSON.parse(JSON.stringify(d.environments  || []));
+      programState.scenarios           = JSON.parse(JSON.stringify(d.scenarios     || []));
+      programState.participants        = JSON.parse(JSON.stringify(d.participants  || {}));
+      programState.userPersonaId       = d.userPersonaId || null;
+      programState.transcript          = JSON.parse(JSON.stringify(d.transcript    || []));
+      programState.systemPromptBase    = d.systemPromptBase    || DEFAULT_DIRECTION;
+      programState.closingInstruction  = d.closingInstruction  || DEFAULT_CLOSING;
+      programState.contentPolicy       = d.contentPolicy       !== undefined ? d.contentPolicy : DEFAULT_CONTENT_POLICY;
       setAutoMode(d.autoMode || 'ai-choice');
+      setReplyLength(d.replyLength || 'few');
       presence = {};
       Object.keys(programState.participants).forEach(function(k){
         presence[k] = d.presence ? (d.presence[k] !== false) : true;
