@@ -2515,7 +2515,14 @@ function submitAIBrief() {
   document.getElementById('ai-brief-status').textContent = 'Calling AI…';
   document.getElementById('ai-brief-error').style.display = 'none';
 
-  fetch(apiSettings.baseUrl + '/chat/completions', {
+  var userMessage = buildAIBriefUserMessage(briefData);
+
+  console.group('%c[Holodeck] AI Program Generation → request', 'color:#56c99a;font-weight:bold;');
+  console.log('%cSystem Prompt', 'color:#888', AI_PROGRAM_SYSTEM_PROMPT);
+  console.log('%cUser Message',  'color:#888', userMessage);
+  console.groupEnd();
+
+  fetch(apiEndpoint(), {
     method: 'POST',
     headers: {
       'Content-Type': 'application/json',
@@ -2525,7 +2532,7 @@ function submitAIBrief() {
       model: apiSettings.model,
       messages: [
         { role: 'system', content: AI_PROGRAM_SYSTEM_PROMPT },
-        { role: 'user',   content: buildAIBriefUserMessage(briefData) }
+        { role: 'user',   content: userMessage }
       ],
       temperature: 0.85,
       max_tokens: 4000
@@ -2538,6 +2545,9 @@ function submitAIBrief() {
   .then(function(data) {
     var raw = data.choices && data.choices[0] && data.choices[0].message && data.choices[0].message.content;
     if (!raw) { throw new Error('No content returned from API.'); }
+    console.group('%c[Holodeck] AI Program Generation → response', 'color:#56c99a;font-weight:bold;');
+    console.log('%cRaw response', 'color:#888', raw);
+    console.groupEnd();
     var cleaned = raw.trim().replace(/^```json\s*/i, '').replace(/^```\s*/i, '').replace(/\s*```$/i, '').trim();
     var generated;
     try { generated = JSON.parse(cleaned); }
