@@ -2002,8 +2002,10 @@ async function callSuggestionApi(prompt, temperature, maxTokens) {
   var data = await response.json();
   var content = data.choices && data.choices[0] && data.choices[0].message && data.choices[0].message.content;
   if (!content) throw new Error('No content in response');
-  content = content.replace(/^```(?:json)?\n?/i, '').replace(/\n?```$/i, '').trim();
-  return JSON.parse(content);
+  var start = content.indexOf('[');
+  var end   = content.lastIndexOf(']');
+  if (start === -1 || end === -1 || end <= start) throw new Error('No JSON array in response');
+  return JSON.parse(content.slice(start, end + 1));
 }
 
 // ═══════════════════════════════════════════════════════════════════
