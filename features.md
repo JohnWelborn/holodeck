@@ -46,9 +46,10 @@
 ## Modals
 
 Environments & Scenarios — shared library/form pattern:
-- Library view with add-to-scene and edit actions
+- Library view with add-to-scene, edit, and delete-from-library actions
 - Create new or edit existing (name + description)
 - Remove from current scene
+- Delete from library — confirm dialog; programs that already added the item keep their copy
 
 Participants:
 - Create/edit form — name, role, personality, speech, knowledge, perspectives on other participants
@@ -56,9 +57,10 @@ Participants:
 - Optional photo URL — falls back to initials if image fails
 
 Traits:
-- Library with add-to-participant action
+- Library with add-to-participant, edit, and delete-from-library actions
 - Create/edit form — name + description
 - Remove from participant (chip X in right panel)
+- Delete from library — confirm dialog; participants that already have the trait keep their copy
 
 Confirm dialog — used for all destructive actions
 

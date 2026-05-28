@@ -213,8 +213,11 @@ function renderLibraryTab(container) {
           name: env.name,
           desc: env.description,
           inScene: isEnvInScene(env.id),
-          onEdit:  function(){ openModal('env', env.id); },
-          onAdd:   function(){ addEnvToScene(env); }
+          onEdit:   function(){ openModal('env', env.id); },
+          onAdd:    function(){ addEnvToScene(env); },
+          onDelete: (function(id, name){ return function(){
+            showConfirm('Remove from library', '"' + name + '" will be removed from the library. Programs that have added it will keep their copy.', function(){ deleteEnvFromLibrary(id); });
+          }; })(env.id, env.name)
         }));
       });
     }
@@ -229,8 +232,11 @@ function renderLibraryTab(container) {
           name: scen.name,
           desc: scen.description,
           inScene: isScenInScene(scen.id),
-          onEdit:  function(){ openModal('scen', scen.id); },
-          onAdd:   function(){ addScenToScene(scen); }
+          onEdit:   function(){ openModal('scen', scen.id); },
+          onAdd:    function(){ addScenToScene(scen); },
+          onDelete: (function(id, name){ return function(){
+            showConfirm('Remove from library', '"' + name + '" will be removed from the library. Programs that have added it will keep their copy.', function(){ deleteScenFromLibrary(id); });
+          }; })(scen.id, scen.name)
         }));
       });
     }
@@ -259,8 +265,11 @@ function renderLibraryTab(container) {
           desc: trait.description,
           inScene: inScene,
           inSceneLabel: 'Added',
-          onEdit:  function(){ openModal('trait', trait.id); },
-          onAdd:   function(){ addTraitFromLibrary(trait); }
+          onEdit:   function(){ openModal('trait', trait.id); },
+          onAdd:    function(){ addTraitFromLibrary(trait); },
+          onDelete: (function(id, name){ return function(){
+            showConfirm('Remove from library', '"' + name + '" will be removed from the library. Participants that have it will keep their copy.', function(){ deleteTraitFromLibrary(id); });
+          }; })(trait.id, trait.name)
         }));
       });
     }
@@ -303,6 +312,14 @@ function buildLibItem(opts) {
   addBtn.textContent = opts.inScene ? (opts.inSceneLabel || 'In scene') : 'Add';
   if (!opts.inScene) addBtn.onclick = opts.onAdd;
   actions.appendChild(addBtn);
+
+  if (opts.onDelete) {
+    var delBtn = document.createElement('button');
+    delBtn.title = 'Delete from library';
+    delBtn.innerHTML = '<i class="ti ti-trash" style="font-size:13px;"></i>';
+    delBtn.onclick = opts.onDelete;
+    actions.appendChild(delBtn);
+  }
 
   item.appendChild(actions);
   return item;
@@ -569,6 +586,22 @@ function saveScen() {
   }
   renderArchScenarios();
   closeModal();
+  scheduleSave();
+}
+
+function deleteEnvFromLibrary(id) {
+  library.environments = library.environments.filter(function(e){ return e.id !== id; });
+  renderModalContent();
+  scheduleSave();
+}
+function deleteScenFromLibrary(id) {
+  library.scenarios = library.scenarios.filter(function(s){ return s.id !== id; });
+  renderModalContent();
+  scheduleSave();
+}
+function deleteTraitFromLibrary(id) {
+  library.traits = library.traits.filter(function(t){ return t.id !== id; });
+  renderModalContent();
   scheduleSave();
 }
 
