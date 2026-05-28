@@ -2022,7 +2022,9 @@ async function callSuggestionApi(prompt, temperature, maxTokens) {
   console.log('[choose your own adventure raw]', slice);
   try { return JSON.parse(slice); } catch (_) {}
   try { return JSON.parse(repairJson(slice).result); } catch (_) {}
-  return JSON.parse(slice.replace(/\]\s*\[/g, ','));
+  var merged = slice.replace(/\]\s*\[/g, ',');
+  try { return JSON.parse(merged); } catch (_) {}
+  return JSON.parse(repairJson(merged).result);
 }
 
 // ═══════════════════════════════════════════════════════════════════
