@@ -101,7 +101,7 @@ Suggestions — clickable buttons that send the option as a message; arrow-key n
 Direction — collapsible section (default collapsed) with three clickable cards, each opening a modal for editing:
 - **System prompt** (`systemPromptBase`) — the full character system prompt template. Use `{name}` where the character's display name should be inserted. Defaults to the standard 4-line author/character framing.
 - **Closing instruction** (`closingInstruction`) — the final line of the user turn telling the LLM what to write. Use `{name}` for the character's name. Defaults to "Write {name}'s next response. Narrative prose — action and dialogue. Stop when their contribution is complete."
-- **Content policy** (`contentPolicy`) — appended to the system prompt on every character turn. Defaults to a PG-13 restriction. Leave empty to disable.
+- **Content policy** (`contentPolicy`) — appended to the system prompt on every character turn. Defaults to a PG-13 restriction. Leave empty to disable. The edit pencil icon is hidden when `apiSettings.censor` is `true` (the default), preventing modification. Set `censor: false` in `config.yaml` to allow editing.
 
 All three are saved per-program.
 

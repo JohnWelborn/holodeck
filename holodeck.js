@@ -20,7 +20,8 @@ function genId(prefix) { return prefix + '-' + Date.now(); }
 // ═══════════════════════════════════════════════════════════════════
 //  API SETTINGS
 // ═══════════════════════════════════════════════════════════════════
-var apiSettings = { baseUrl: 'http://localhost:1337/v1', model: 'mistral-v7-tekken', token: '' };
+var apiSettings = { baseUrl: 'http://localhost:1337/v1', model: 'mistral-v7-tekken', token: '', censor: true };
+if (new URLSearchParams(location.search).get('censor') === 'false') apiSettings.censor = false;
 document.getElementById('api-url').value   = apiSettings.baseUrl;
 document.getElementById('api-model').value = apiSettings.model;
 document.getElementById('api-token').value = apiSettings.token;
@@ -881,8 +882,8 @@ function renderArchContentPolicy() {
 
   var item = document.createElement('div');
   item.className = 'arch-item';
-  item.style.cssText = 'display:flex;align-items:center;padding:5px 7px;border-radius:var(--border-radius-md);background:var(--color-background-primary);border:0.5px solid var(--color-border-tertiary);margin-bottom:3px;min-width:0;cursor:pointer;';
-  item.onclick = function() { openModal('content-policy'); };
+  item.style.cssText = 'display:flex;align-items:center;padding:5px 7px;border-radius:var(--border-radius-md);background:var(--color-background-primary);border:0.5px solid var(--color-border-tertiary);margin-bottom:3px;min-width:0;' + (apiSettings.censor ? '' : 'cursor:pointer;');
+  if (!apiSettings.censor) item.onclick = function() { openModal('content-policy'); };
 
   var nameEl = document.createElement('span');
   nameEl.className = 'arch-item-name';
@@ -890,12 +891,14 @@ function renderArchContentPolicy() {
   nameEl.textContent = 'Content policy';
   item.appendChild(nameEl);
 
-  var editBtn = document.createElement('button');
-  editBtn.title = 'Edit content policy';
-  editBtn.style.cssText = 'color:var(--color-text-secondary);display:flex;align-items:center;padding:1px;border-radius:4px;flex-shrink:0;';
-  editBtn.innerHTML = '<i class="ti ti-pencil" style="font-size:11px;"></i>';
-  editBtn.onclick = function(e) { e.stopPropagation(); openModal('content-policy'); };
-  item.appendChild(editBtn);
+  if (!apiSettings.censor) {
+    var editBtn = document.createElement('button');
+    editBtn.title = 'Edit content policy';
+    editBtn.style.cssText = 'color:var(--color-text-secondary);display:flex;align-items:center;padding:1px;border-radius:4px;flex-shrink:0;';
+    editBtn.innerHTML = '<i class="ti ti-pencil" style="font-size:11px;"></i>';
+    editBtn.onclick = function(e) { e.stopPropagation(); openModal('content-policy'); };
+    item.appendChild(editBtn);
+  }
 
   container.appendChild(item);
 }
