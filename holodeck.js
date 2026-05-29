@@ -259,6 +259,10 @@ function renderLibraryTab(container) {
 
   } else if (currentModal === 'trait') {
     appendCreateLink(container, 'trait');
+    var traitNote = document.createElement('p');
+    traitNote.style.cssText = 'font-size:10px;font-weight:500;color:#c47070;letter-spacing:0.5px;text-transform:uppercase;margin-bottom:10px;text-align:center;';
+    traitNote.textContent = '↓ Not shared with other participants ↓';
+    container.appendChild(traitNote);
     if (library.traits.length === 0) {
       container.appendChild(emptyState('No traits in library yet.'));
     } else {
@@ -1072,18 +1076,13 @@ function buildPrompt(targetId, transcriptOverride) {
     stateBlock = '**Current state:**\n' + stateLines.join('\n');
   }
 
-  // Cast lines — POV + observable traits
+  // Cast lines — POV only
   var castLines = Object.keys(programState.participants)
     .filter(function(id){ return id !== targetId; })
     .map(function(id){
       var p = programState.participants[id];
       var perspective = (target.perspectives && target.perspectives[id]) || '';
-      var line = '**' + p.fullName + '** (' + p.role + ') — ' + perspective;
-      if (p.traits && p.traits.length > 0) {
-        var names = p.traits.map(function(t){ return (typeof t === 'object') ? t.name : t; });
-        line += ' *Currently: ' + names.join(', ') + '.*';
-      }
-      return line;
+      return '**' + p.fullName + '** (' + p.role + ') — ' + perspective;
     });
 
   // Transcript — filter by which entries the target was present for
@@ -2015,12 +2014,7 @@ function buildUserSuggestionPrompt(targetId, count, draftText) {
     .map(function(id){
       var p = programState.participants[id];
       var perspective = (target.perspectives && target.perspectives[id]) || '';
-      var line = '**' + p.fullName + '** (' + p.role + ') — ' + perspective;
-      if (p.traits && p.traits.length > 0) {
-        var names = p.traits.map(function(t){ return (typeof t === 'object') ? t.name : t; });
-        line += ' *Currently: ' + names.join(', ') + '.*';
-      }
-      return line;
+      return '**' + p.fullName + '** (' + p.role + ') — ' + perspective;
     });
 
   var filteredTranscript = programState.transcript.filter(function(msg){
