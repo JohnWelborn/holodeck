@@ -1916,7 +1916,7 @@ function renderSuggestions(items) {
   items.forEach(function(text, i) {
     var btn = document.createElement('button');
     btn.className = 'suggestion-item';
-    btn.textContent = text;
+    btn.innerHTML = renderDialogue(text);
     btn.dataset.index = String(i);
     btn.addEventListener('click', function() {
       var inp = document.getElementById('msg-input');

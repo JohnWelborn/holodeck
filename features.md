@@ -84,7 +84,7 @@ Input:
 - Layout: left side of the extra-buttons row holds persona chip, CYOA, Expand, and Describe; right side (pushed by flex spacer) holds Reply Length and Auto-reply mode
 
 Modes:
-- Choose your own adventure — makes 3 parallel full LLM calls (using the same prompt as "Trigger to respond") and presents the 3 complete responses as clickable choices; clicking one sends it as the user persona's message
+- Choose your own adventure — makes 3 parallel full LLM calls (using the same prompt as "Trigger to respond") and presents the 3 complete responses as clickable choices; clicking one sends it as the user persona's message; quoted text in suggestions is colorized with the same `.dialogue` styling used in the conversation frame
 - Expand / Wand — expands draft text via LLM, presents result as a suggestion
 - Describe / Eye — opens a dialog pre-filled with "Describe the scene from {active persona}'s point of view"; user can edit before sending; prompts the LLM with the full scene context and the instruction; response appears as a special "Scene" message (eye icon, italic text, no character) stored in the transcript as `type:'description'`; included in future character prompts as `[Scene]: <text>` in the transcript section; supports regen/edit/delete like regular messages
 - Auto — bolt button opens a popup to select one of three auto-play modes:
