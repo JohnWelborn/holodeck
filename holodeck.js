@@ -462,7 +462,7 @@ function renderParticipantForm(container) {
   // Build perspectives HTML
   var perspHtml = '';
   if (otherIds.length > 0) {
-    perspHtml = '<hr class="form-section-divider"><div class="form-group"><label class="form-label">Perspectives on Other Participants</label><p class="form-hint">How does this character view each other participant? Written from their own point of view — what they think, trust, remember.</p>';
+    perspHtml = '<div class="form-group"><label class="form-label">Perspectives on Other Participants</label><p class="form-hint">How does this character view each other participant? Written from their own point of view — what they think, trust, remember.</p>';
     otherIds.forEach(function(oid) {
       var op = programState.participants[oid];
       perspHtml += '<div class="perspective-item">';
@@ -507,6 +507,7 @@ function renderParticipantForm(container) {
     '  <p class="form-hint">How they talk — formal/informal, terse/verbose, jargon, habits, things they\'d never say.</p>',
     '  <textarea class="form-input form-textarea" id="f-speech" style="min-height:80px;" placeholder="Terse and clinical under stress. Medical jargon used naturally, never explained…"></textarea>',
     '</div>',
+    '<div class="form-private-divider"><span>↓ Not shared with other participants ↓</span></div>',
     '<div class="form-group">',
     '  <label class="form-label">What They Know About This Scene</label>',
     '  <p class="form-hint">Their knowledge state at this moment — what they\'ve seen, heard, or calculated. Distinct from general backstory.</p>',
