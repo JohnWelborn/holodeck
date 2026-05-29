@@ -1022,7 +1022,8 @@ function renderArchScenarios() {
 
 function updateArchTokenUsage() {
   var display = document.getElementById('arch-token-display');
-  if (!display || !lastUsage) return;
+  if (!display) return;
+  if (!lastUsage) { display.innerHTML = ''; return; }
   var p = lastUsage.prompt_tokens, c = lastUsage.completion_tokens, t = lastUsage.total_tokens;
   display.innerHTML = '<span title="Tokens ' + t + ' total (' + p + ' prompt / ' + c + ' completion)">Tokens: ' + t + ' (' + p + 'p / ' + c + 'c)</span>';
 }
@@ -2607,6 +2608,7 @@ function switchProgram(id) {
   programState.systemPromptBase    = data.systemPromptBase    || DEFAULT_DIRECTION;
   programState.closingInstruction  = data.closingInstruction  || DEFAULT_CLOSING;
   programState.contentPolicy       = data.contentPolicy       !== undefined ? data.contentPolicy : DEFAULT_CONTENT_POLICY;
+  lastUsage = data.lastUsage || null;
 
   // Sync presence map — restore saved state, defaulting new participants to present
   presence = {};
@@ -2623,6 +2625,7 @@ function switchProgram(id) {
   renderArchContentPolicy();
   renderArchEnvironments();
   renderArchScenarios();
+  updateArchTokenUsage();
 
   // Update persona chip
   var uid = programState.userPersonaId;
@@ -3218,6 +3221,7 @@ function syncProgramStateToStore() {
   programsStore[activeProgramId].closingInstruction = programState.closingInstruction;
   programsStore[activeProgramId].contentPolicy      = programState.contentPolicy;
   programsStore[activeProgramId].presence           = JSON.parse(JSON.stringify(presence));
+  programsStore[activeProgramId].lastUsage          = lastUsage;
 }
 
 function saveToStorage() {
@@ -3285,6 +3289,7 @@ function loadFromStorage() {
       programState.contentPolicy       = d.contentPolicy       !== undefined ? d.contentPolicy : DEFAULT_CONTENT_POLICY;
       setAutoMode(d.autoMode || 'ai-choice');
       setReplyLength(d.replyLength || 'few');
+      lastUsage = d.lastUsage || null;
       presence = {};
       Object.keys(programState.participants).forEach(function(k){
         presence[k] = d.presence ? (d.presence[k] !== false) : true;
@@ -3377,6 +3382,7 @@ renderArchClosingInstruction();
 renderArchContentPolicy();
 renderArchEnvironments();
 renderArchScenarios();
+updateArchTokenUsage();
 (function() {
   var uid = programState.userPersonaId;
   var pp  = uid ? programState.participants[uid] : null;
