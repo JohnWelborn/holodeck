@@ -23,6 +23,7 @@
 - Export to file — downloads a JSON snapshot of all programs, library, and settings (token excluded)
 - Import from file — restores from an exported file; keeps current API token, then reloads
 - Reset to defaults — clears all saved data and reloads with defaults; API settings are preserved
+- `?session=name` query parameter — namespaces the localStorage key to `holodeck_v1_name`, giving that URL an independent data store; omitting the parameter uses the default `holodeck_v1` key as before
 
 ---
 

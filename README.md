@@ -27,6 +27,8 @@ Any OpenAI-compatible endpoint works — base URL, model name, and API token are
 
 Alternatively, open `holodeck.html` directly — API settings can be entered in the settings panel without a config file.
 
+Add `?session=name` to the URL to use an independent data store (e.g. `holodeck.html?session=work`). Useful for running multiple separate sessions in the same browser.
+
 ## Features
 
 - Per-character LLM calls with filtered transcripts and subjective cast lists

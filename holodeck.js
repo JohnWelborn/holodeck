@@ -1,3 +1,6 @@
+var _sessionParam = new URLSearchParams(location.search).get('session') || '';
+var STORAGE_KEY = _sessionParam ? 'holodeck_v1_' + _sessionParam : 'holodeck_v1';
+
 // ═══════════════════════════════════════════════════════════════════
 //  UTILITIES
 // ═══════════════════════════════════════════════════════════════════
@@ -3209,7 +3212,7 @@ function syncProgramStateToStore() {
 function saveToStorage() {
   syncProgramStateToStore();
   try {
-    localStorage.setItem('holodeck_v1', JSON.stringify({
+    localStorage.setItem(STORAGE_KEY, JSON.stringify({
       library: library,
       programsStore: programsStore,
       treeData: treeData,
@@ -3237,7 +3240,7 @@ function loadFromStorage() {
       document.getElementById('api-model').value = apiSettings.model;
       document.getElementById('api-token').value = apiSettings.token;
     }
-    var raw = localStorage.getItem('holodeck_v1');
+    var raw = localStorage.getItem(STORAGE_KEY);
     if (!raw) return;
     var saved = JSON.parse(raw);
     if (saved.library) {
@@ -3284,7 +3287,7 @@ function loadFromStorage() {
 function clearStorage() {
   showConfirm('Reset to defaults', 'Reset everything to defaults? All programs and transcript history will be lost. API settings will be kept.', function() {
     localStorage.setItem('holodeck_api', JSON.stringify(apiSettings));
-    localStorage.removeItem('holodeck_v1');
+    localStorage.removeItem(STORAGE_KEY);
     location.reload();
   });
 }
@@ -3318,7 +3321,7 @@ function importData() {
         var data = JSON.parse(e.target.result);
         if (!data.programsStore || !data.treeData) throw new Error('Invalid holodeck file.');
         var mergedApi = Object.assign({}, data.apiSettings || {}, { token: apiSettings.token });
-        localStorage.setItem('holodeck_v1', JSON.stringify({
+        localStorage.setItem(STORAGE_KEY, JSON.stringify({
           library: data.library || { environments: [], scenarios: [], traits: [] },
           programsStore: data.programsStore,
           treeData: data.treeData,
