@@ -85,6 +85,7 @@ var autoMode      = 'ai-choice'; // 'manual' | 'ai-choice' | 'everyone'
 var replyLength   = 'few';       // 'sentence' | 'few' | 'short-para' | 'para' | 'full'
 var everyoneQueue = null;     // array of participantIds remaining in current round, or null
 var isSuggesting  = false;
+var lastUsage     = null;     // { prompt_tokens, completion_tokens, total_tokens } from last character reply
 
 // ═══════════════════════════════════════════════════════════════════
 //  PANEL TOGGLES
@@ -1019,6 +1020,13 @@ function renderArchScenarios() {
   });
 }
 
+function updateArchTokenUsage() {
+  var display = document.getElementById('arch-token-display');
+  if (!display || !lastUsage) return;
+  var p = lastUsage.prompt_tokens, c = lastUsage.completion_tokens, t = lastUsage.total_tokens;
+  display.innerHTML = '<span title="Tokens ' + t + ' total (' + p + ' prompt / ' + c + ' completion)">Tokens: ' + t + ' (' + p + 'p / ' + c + 'c)</span>';
+}
+
 // ═══════════════════════════════════════════════════════════════════
 //  PROMPT BUILDER
 // ═══════════════════════════════════════════════════════════════════
@@ -1359,7 +1367,8 @@ async function streamCompletion(targetId, prompt, bubble, container) {
     top_p: 0.95,
     frequency_penalty: 0.1,
     presence_penalty: 0.1,
-    stream: true
+    stream: true,
+    stream_options: { include_usage: true }
   };
 
   console.group('%c[Holodeck] API Request → ' + p.displayName, 'color:#56c99a;font-weight:bold;');
@@ -1401,6 +1410,7 @@ async function streamCompletion(targetId, prompt, bubble, container) {
           var choice = parsed.choices && parsed.choices[0];
           var delta  = choice && choice.delta && choice.delta.content;
           if (choice && choice.finish_reason) finishReason = choice.finish_reason;
+          if (parsed.usage) lastUsage = parsed.usage;
           if (delta) {
             if (!started) { bubble.textContent = ''; started = true; }
             fullText += delta;
@@ -1426,6 +1436,7 @@ async function streamCompletion(targetId, prompt, bubble, container) {
       warn.textContent = '⚠ Reply was cut off (max_tokens reached).';
       bubble.appendChild(warn);
     }
+    updateArchTokenUsage();
     return fullText.trim();
   } finally {
     console.groupEnd();

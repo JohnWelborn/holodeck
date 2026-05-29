@@ -121,3 +121,5 @@ Participants:
 - Remove — confirm dialog; auto-switches persona if the active speaker is deleted
 - Add trait — opens trait modal
 - Edit — opens full edit form
+
+Token usage — pinned footer at the bottom of the Arch, hidden until the first character reply completes. Shows `total_tokens (prompt / completion)` from the most recent character reply. Updated after every `streamCompletion` call; CYOA suggestion calls do not update it.
