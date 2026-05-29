@@ -53,7 +53,8 @@ Environments & Scenarios — shared library/form pattern:
 - Delete from library — confirm dialog; programs that already added the item keep their copy
 
 Participants:
-- Create/edit form — name, role, personality, speech, knowledge, perspectives on other participants
+- Create/edit form — name, role, personality, speech, knowledge, private personality (optional), perspectives on other participants
+- Private fields (knowledge, private personality, perspectives) are only included in that participant's own LLM prompts — not visible to other participants' AI
 - Avatar color palette — preset swatches
 - Optional photo URL — falls back to initials if image fails
 

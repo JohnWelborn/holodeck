@@ -226,6 +226,7 @@
       font-size: 13px; font-family: var(--font-sans); outline: none;
     }
     .form-input:focus { border-color: var(--color-border-primary); }
+    .form-input::placeholder { color: #555555; }
     .form-textarea { resize: vertical; min-height: 76px; line-height: 1.55; }
 
     .form-grid-2 { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
@@ -237,7 +238,7 @@
     .form-private-divider {
       display: flex; align-items: center; gap: 8px;
       margin: 16px 0 12px;
-      font-size: 10px; font-weight: 500; color: var(--color-text-secondary);
+      font-size: 10px; font-weight: 500; color: #c47070;
       letter-spacing: 0.5px; text-transform: uppercase; white-space: nowrap;
     }
     .form-private-divider::before, .form-private-divider::after {

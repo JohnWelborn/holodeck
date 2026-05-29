@@ -502,12 +502,17 @@ function renderParticipantForm(container) {
     '  <p class="form-hint">Disposition, values, how they behave under pressure, what drives them. 3–5 sentences.</p>',
     '  <textarea class="form-input form-textarea" id="f-personality" style="min-height:90px;" placeholder="Vasquez is precise, direct, and quietly authoritative. Under pressure she becomes more compressed — fewer words, faster decisions…"></textarea>',
     '</div>',
+    '<div class="form-private-divider"><span>↓ Not shared with other participants ↓</span></div>',
+    '<div class="form-group">',
+    '  <label class="form-label">Private Personality <span style="font-weight:400;color:var(--color-text-tertiary);">(optional)</span></label>',
+    '  <p class="form-hint">Hidden inner reality — true feelings, secret motivations, masked states that contrast with their public face.</p>',
+    '  <textarea class="form-input form-textarea" id="f-private-personality" style="min-height:80px;" placeholder="Beneath the composed exterior she is barely holding together…"></textarea>',
+    '</div>',
     '<div class="form-group">',
     '  <label class="form-label">Speech Patterns</label>',
     '  <p class="form-hint">How they talk — formal/informal, terse/verbose, jargon, habits, things they\'d never say.</p>',
     '  <textarea class="form-input form-textarea" id="f-speech" style="min-height:80px;" placeholder="Terse and clinical under stress. Medical jargon used naturally, never explained…"></textarea>',
     '</div>',
-    '<div class="form-private-divider"><span>↓ Not shared with other participants ↓</span></div>',
     '<div class="form-group">',
     '  <label class="form-label">What They Know About This Scene</label>',
     '  <p class="form-hint">Their knowledge state at this moment — what they\'ve seen, heard, or calculated. Distinct from general backstory.</p>',
@@ -524,7 +529,8 @@ function renderParticipantForm(container) {
     document.getElementById('f-photo').value        = prefill.photo       || '';
     document.getElementById('f-personality').value  = prefill.personality || '';
     document.getElementById('f-speech').value       = prefill.speech      || '';
-    document.getElementById('f-knowledge').value    = prefill.knowledge   || '';
+    document.getElementById('f-knowledge').value          = prefill.knowledge          || '';
+    document.getElementById('f-private-personality').value = prefill.privatePersonality || '';
     if (prefill.perspectives) {
       container.querySelectorAll('[data-perspective-for]').forEach(function(ta) {
         ta.value = prefill.perspectives[ta.dataset.perspectiveFor] || '';
@@ -617,7 +623,8 @@ function saveParticipant() {
   var photo       = (document.getElementById('f-photo').value        || '').trim() || null;
   var personality = (document.getElementById('f-personality').value  || '').trim();
   var speech      = (document.getElementById('f-speech').value       || '').trim();
-  var knowledge   = (document.getElementById('f-knowledge').value    || '').trim();
+  var knowledge          = (document.getElementById('f-knowledge').value           || '').trim();
+  var privatePersonality = (document.getElementById('f-private-personality').value || '').trim();
 
   if (!displayName) { highlightRequired('f-display-name'); return; }
   if (!role)        { highlightRequired('f-role'); return; }
@@ -635,7 +642,7 @@ function saveParticipant() {
     if (p) {
       p.displayName = displayName; p.fullName = fullName; p.role = role;
       p.photo = photo; p.personality = personality; p.speech = speech;
-      p.knowledge = knowledge; p.perspectives = perspectives;
+      p.knowledge = knowledge; p.privatePersonality = privatePersonality; p.perspectives = perspectives;
       p.bg = pal.bg; p.color = pal.color;
     }
   } else {
@@ -648,7 +655,7 @@ function saveParticipant() {
       id: newId, displayName: displayName, fullName: fullName,
       initials: initials, role: role, bg: pal.bg, color: pal.color,
       photo: photo, personality: personality, speech: speech,
-      knowledge: knowledge, perspectives: perspectives
+      knowledge: knowledge, privatePersonality: privatePersonality, perspectives: perspectives
     };
     presence[newId] = true;
   }
@@ -1104,6 +1111,7 @@ function buildPrompt(targetId, transcriptOverride) {
     '**Speech:** ' + target.speech,
     '**What they know about this scene:** ' + target.knowledge
   ];
+  if (target.privatePersonality) characterSheet.push('**Private personality:** ' + target.privatePersonality);
   if (stateBlock) characterSheet.push(stateBlock);
 
   var userMessage = [
@@ -2031,6 +2039,7 @@ function buildUserSuggestionPrompt(targetId, count, draftText) {
     '**Speech:** ' + target.speech,
     '**What they know about this scene:** ' + target.knowledge
   ];
+  if (target.privatePersonality) characterSheet.push('**Private personality:** ' + target.privatePersonality);
   if (stateBlock) characterSheet.push(stateBlock);
 
   var systemPrompt, closingInstruction;
