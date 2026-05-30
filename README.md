@@ -24,20 +24,20 @@ Each character makes its own LLM call against a filtered transcript; characters 
 
 This repository was built as an exercise in AI-assisted coding.
 
-## Model
+## Setup
 
-Designed for use with [Mistral-Small-23B-Instruct-2501](https://huggingface.co/mistralai/Mistral-Small-24B-Instruct-2501) via a local server (OpenAI-compatible API).
+### Model
+
+Designed for use with a Mistral Small 3.x 24B model using the Mistral v7 chat template via a local server (OpenAI-compatible API)
+
+- [unsloth/Mistral-Small-3.1-24B-Instruct-2503-GGUF](https://huggingface.co/unsloth/Mistral-Small-3.1-24B-Instruct-2503-GGUF)
+- [bartowski/TheDrummer_Cydonia-24B-v4.2.0-GGUF](https://huggingface.co/bartowski/TheDrummer_Cydonia-24B-v4.2.0-GGUF)
 
 Any OpenAI-compatible endpoint works. Base URL, model name, and API token are all configurable at runtime.
 
-## Setup
-
-### Download the model
-
-```bash
-curl -L -o Mistral-Small-24B-Instruct-2501-Q8_0.gguf \
-  "https://huggingface.co/bartowski/Mistral-Small-24B-Instruct-2501-GGUF/resolve/main/Mistral-Small-24B-Instruct-2501-Q8_0.gguf"
-```
+| GPU | VRAM | Recommended quantization |
+|-----|------|--------------------------|
+| RTX 5090 | 32 GB | Q8_0 |
 
 ### Start model with llama-server
 
@@ -58,7 +58,7 @@ Run `llama-server.exe` from the extracted directory:
 
 ```bash
 ./llama-server.exe \
-  --model Mistral-Small-24B-Instruct-2501-Q8_0.gguf \
+  --model TheDrummer_Cydonia-24B-v4.2.0-Q8_0.gguf \
   --host 127.0.0.1 \
   --port 8081 \
   --ctx-size 32768 \
@@ -98,14 +98,6 @@ holodeck.html?session=private&censor=false
 3. Tap `holodeck.html` and open it with a browser — Cx File Explorer starts a local web server automatically, which allows the page to function correctly
 
 Configure the API settings in the settings panel once the page loads.
-
----
-
-## Troubleshooting
-
-**Out of memory:** Reduce `--ctx-size` (try `8192`) or lower `--n-gpu-layers` to partially offload.
-
-**Slow responses:** Mistral-Small-24B is ~14 GB. On CPU it generates ~1–3 tokens/sec. A GPU with 16+ GB VRAM runs at full speed.
 
 ## License
 
