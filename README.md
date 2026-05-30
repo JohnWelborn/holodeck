@@ -18,6 +18,7 @@ Each character makes its own LLM call against a filtered transcript; characters 
 - **Choose your own adventure**: three parallel response options to pick from
 - **Per-program prompt control**: system prompt, closing instruction, and content policy per scene
 - **Mobile-friendly layout**: designed to work on phones
+- **Character card import**: drag-and-drop or file-pick a SillyTavern V2 (or V1) character card PNG to pre-fill the participant form with name, personality, speech style, photo, and tags
 
 ## Disclaimer
 

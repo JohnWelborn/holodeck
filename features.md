@@ -57,6 +57,7 @@ Participants:
 - Private fields (knowledge, private personality, perspectives) are only included in that participant's own LLM prompts — not visible to other participants' AI
 - Avatar color palette — preset swatches
 - Optional photo URL — falls back to initials if image fails
+- Import character card — "+ Import character card" button and drag-and-drop zone in the library tab; accepts PNG files with embedded V2 (or V1) chara metadata; pre-fills the participant form with name, personality (description + personality fields concatenated), speech (from mes_example), photo (PNG converted to data: URL), and traits (from tags); role must be filled in manually before saving; fields with no Holodeck equivalent (scenario, system_prompt, post_history_instructions, first_mes, alternate_greetings, character_book, creator, creator_notes, character_version) are silently skipped
 
 Traits:
 - Library with add-to-participant, edit, and delete-from-library actions

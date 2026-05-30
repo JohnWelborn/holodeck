@@ -21,6 +21,71 @@ function generateInitials(name) {
 function genId(prefix) { return prefix + '-' + Date.now(); }
 
 // ═══════════════════════════════════════════════════════════════════
+//  CHARACTER CARD IMPORT
+// ═══════════════════════════════════════════════════════════════════
+function parsePngCharaData(arrayBuffer) {
+  var bytes = new Uint8Array(arrayBuffer);
+  var sig = [137,80,78,71,13,10,26,10];
+  for (var i = 0; i < 8; i++) { if (bytes[i] !== sig[i]) return null; }
+  var pos = 8;
+  while (pos < bytes.length - 12) {
+    var len = (bytes[pos]<<24)|(bytes[pos+1]<<16)|(bytes[pos+2]<<8)|bytes[pos+3];
+    var type = String.fromCharCode(bytes[pos+4],bytes[pos+5],bytes[pos+6],bytes[pos+7]);
+    if (type === 'tEXt') {
+      var dataEnd = pos + 8 + len;
+      var nullIdx = -1;
+      for (var j = pos+8; j < dataEnd; j++) { if (bytes[j] === 0) { nullIdx = j; break; } }
+      if (nullIdx >= 0) {
+        var keyword = String.fromCharCode.apply(null, bytes.slice(pos+8, nullIdx));
+        if (keyword === 'chara') {
+          var value = '';
+          for (var k = nullIdx+1; k < dataEnd; k++) value += String.fromCharCode(bytes[k]);
+          try {
+            var parsed = JSON.parse(atob(value));
+            return parsed.spec === 'chara_card_v2' ? parsed.data : parsed;
+          } catch(e) { return null; }
+        }
+      }
+    }
+    pos += 12 + len;
+  }
+  return null;
+}
+
+function readFileAsDataURL(file) {
+  return new Promise(function(resolve, reject) {
+    var fr = new FileReader();
+    fr.onload = function(e) { resolve(e.target.result); };
+    fr.onerror = reject;
+    fr.readAsDataURL(file);
+  });
+}
+
+function importCharacterCard(file) {
+  Promise.all([file.arrayBuffer(), readFileAsDataURL(file)]).then(function(results) {
+    var arrayBuffer = results[0];
+    var dataUrl     = results[1];
+    var cardData = parsePngCharaData(arrayBuffer);
+    if (!cardData) {
+      alert('No character card data found in this file.');
+      return;
+    }
+    var personality = [cardData.description, cardData.personality].filter(Boolean).join('\n\n');
+    var tags = (cardData.tags || []).filter(Boolean);
+    importPrefill = {
+      displayName: cardData.name     || '',
+      personality: personality,
+      speech:      cardData.mes_example || '',
+      photo:       dataUrl,
+      traits:      tags.map(function(tag) { return { id: 'tag-' + tag, name: tag, description: '' }; })
+    };
+    switchToForm();
+  }).catch(function() {
+    alert('Could not read this file.');
+  });
+}
+
+// ═══════════════════════════════════════════════════════════════════
 //  API SETTINGS
 // ═══════════════════════════════════════════════════════════════════
 var apiSettings = { baseUrl: 'http://localhost:1337/v1', model: 'mistral-v7-tekken', token: '', censor: true, maxTokens: 1500 };
@@ -100,6 +165,7 @@ function toggleRight() { rightOpen = !rightOpen; document.getElementById('right-
 var currentModal    = null;   // 'env' | 'scen' | 'participant' | 'trait'
 var currentModalTab = 'library';
 var editingItemId   = null;
+var importPrefill   = null;   // pre-filled data from a character card import
 
 function openModal(type, editId) {
   currentModal    = type;
@@ -121,7 +187,7 @@ function openModal(type, editId) {
 function closeModal() {
   document.getElementById('modal-overlay').classList.remove('open');
   document.getElementById('modal-box').classList.remove('open');
-  currentModal = null; editingItemId = null;
+  currentModal = null; editingItemId = null; importPrefill = null;
 }
 
 function handleOverlayClick(e) {
@@ -153,6 +219,7 @@ function switchToForm() {
 function switchToLibrary() {
   currentModalTab = 'library';
   editingItemId   = null;
+  importPrefill   = null;
   document.getElementById('modal-subtitle').textContent = '';
   renderModalContent();
 }
@@ -247,6 +314,22 @@ function renderLibraryTab(container) {
 
   } else if (currentModal === 'participant') {
     appendCreateLink(container, 'participant');
+
+    var importDiv = document.createElement('div');
+    importDiv.style.cssText = 'margin-bottom:10px;';
+    var importBtn = document.createElement('button');
+    importBtn.className = 'btn-ghost';
+    importBtn.style.cssText = 'width:100%;font-size:12px;padding:6px 12px;text-align:left;display:flex;align-items:center;gap:6px;';
+    importBtn.innerHTML = '<i class="ti ti-upload" style="font-size:13px;"></i> Import character card';
+    importBtn.onclick = function() {
+      var input = document.createElement('input');
+      input.type = 'file'; input.accept = '.png,.json';
+      input.onchange = function(e) { if (e.target.files[0]) importCharacterCard(e.target.files[0]); };
+      input.click();
+    };
+    importDiv.appendChild(importBtn);
+    container.appendChild(importDiv);
+
     var ids = Object.keys(programState.participants);
     if (ids.length === 0) {
       container.appendChild(emptyState('No participants in library yet.'));
@@ -256,6 +339,19 @@ function renderLibraryTab(container) {
         container.appendChild(buildParticipantLibItem(p, true));
       });
     }
+
+    var dropZone = document.createElement('div');
+    dropZone.style.cssText = 'margin-top:12px;padding:10px;border:1px dashed var(--border-color);border-radius:6px;text-align:center;font-size:11px;color:var(--color-text-tertiary);';
+    dropZone.textContent = 'Drop a character card PNG here to import';
+    dropZone.addEventListener('dragover', function(e) { e.preventDefault(); dropZone.style.borderColor = 'var(--active-color)'; });
+    dropZone.addEventListener('dragleave', function()  { dropZone.style.borderColor = 'var(--border-color)'; });
+    dropZone.addEventListener('drop', function(e) {
+      e.preventDefault();
+      dropZone.style.borderColor = 'var(--border-color)';
+      var f = e.dataTransfer.files[0];
+      if (f) importCharacterCard(f);
+    });
+    container.appendChild(dropZone);
 
   } else if (currentModal === 'trait') {
     appendCreateLink(container, 'trait');
@@ -540,6 +636,11 @@ function renderParticipantForm(container) {
         ta.value = prefill.perspectives[ta.dataset.perspectiveFor] || '';
       });
     }
+  } else if (importPrefill) {
+    document.getElementById('f-display-name').value = importPrefill.displayName || '';
+    document.getElementById('f-photo').value        = importPrefill.photo       || '';
+    document.getElementById('f-personality').value  = importPrefill.personality || '';
+    document.getElementById('f-speech').value       = importPrefill.speech      || '';
   }
 }
 
@@ -649,6 +750,7 @@ function saveParticipant() {
       p.knowledge = knowledge; p.privatePersonality = privatePersonality; p.perspectives = perspectives;
       p.bg = pal.bg; p.color = pal.color;
     }
+    importPrefill = null;
   } else {
     var initials = generateInitials(displayName);
     var newId = initials;
@@ -661,6 +763,10 @@ function saveParticipant() {
       photo: photo, personality: personality, speech: speech,
       knowledge: knowledge, privatePersonality: privatePersonality, perspectives: perspectives
     };
+    if (importPrefill && importPrefill.traits && importPrefill.traits.length > 0) {
+      programState.participants[newId].traits = importPrefill.traits;
+    }
+    importPrefill = null;
     presence[newId] = true;
   }
 
