@@ -9,6 +9,7 @@ A local browser-based interactive fiction engine for simulating multi-character 
 Each character makes its own LLM call against a filtered transcript; characters only see what they should know, giving each one a genuinely subjective view of events.
 
 - **Local and offline**: runs entirely in your browser against your own llama.cpp server, no cloud required
+- **localStorage**: all data is stored in your browser's local storage — no server, no account
 - **Programs**: named scenes with participants, environments, and scenarios; AI generation from a premise
 - **Presence toggling**: characters enter and leave the scene; their context is filtered from future prompts
 - **Generation variants**: regenerate or edit any message and navigate between versions
@@ -16,6 +17,7 @@ Each character makes its own LLM call against a filtered transcript; characters 
 - **Auto-play**: AI picks who speaks next, or every present character takes a turn
 - **Choose your own adventure**: three parallel response options to pick from
 - **Per-program prompt control**: system prompt, closing instruction, and content policy per scene
+- **Mobile-friendly layout**: designed to work on phones
 
 ## Disclaimer
 
@@ -83,6 +85,20 @@ Both can be combined:
 ```
 holodeck.html?session=private&censor=false
 ```
+
+## Mobile
+
+<img src="screenshot_mobile.png" width="300" alt="Holodeck mobile screenshot">
+
+### Android setup
+
+1. Download the repository as a ZIP from GitHub (Code → Download ZIP)
+2. Open the ZIP in [Cx File Explorer](https://play.google.com/store/apps/details?id=com.cxinventor.file.explorer)
+3. Tap `holodeck.html` and open it with a browser — Cx File Explorer starts a local web server automatically, which allows the page to function correctly
+
+Configure the API settings in the settings panel once the page loads.
+
+---
 
 ## Troubleshooting
 
