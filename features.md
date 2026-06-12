@@ -15,14 +15,14 @@
 
 ## Configuration
 
-- API base URL — live input, defaults to `http://localhost:1337/v1`
-- Model name — live input
-- API token — password field, live input
-- Max tokens — number input, defaults to 1500; used as the `max_tokens` cap on all LLM calls
-- Test Connection — fires a real request and reports success/failure in the status bar
-- Export to file — downloads a JSON snapshot of all programs, library, and settings (token excluded)
-- Import from file — restores from an exported file; keeps current API token, then reloads
-- Reset to defaults — clears all saved data and reloads with defaults; API settings are preserved
+- API endpoints — a dropdown next to the gear icon shows the active endpoint's name and lists all configured endpoints; each entry has a pencil (edit) and, when more than one endpoint exists, a trash (delete) icon, plus a "+ Add endpoint" row
+- Adding/editing an endpoint opens a modal with Name, Base URL, Model, API Token (password field), and Max tokens (number, defaults to 1500, used as the `max_tokens` cap on all LLM calls for that endpoint)
+- Test Connection — inside the endpoint modal; fires a real request using the form's current values and reports success/failure below the button
+- Selecting an endpoint from the dropdown makes it active immediately for all LLM calls
+- Settings (gear icon) — Export to file, Import from file, Reset to defaults, and a status line for general API errors
+- Export to file — downloads a JSON snapshot of all programs, library, and endpoints (tokens excluded)
+- Import from file — restores from an exported file; preserves existing tokens for endpoints with matching IDs, then reloads
+- Reset to defaults — clears all saved data and reloads with defaults; API endpoints are preserved
 - `?session=name` query parameter — namespaces the localStorage key to `holodeck_v1_name`, giving that URL an independent data store; omitting the parameter uses the default `holodeck_v1` key as before
 
 ---
@@ -110,7 +110,7 @@ Modes:
   - Manual Trigger — no automation; characters only respond when manually triggered via ▶
   - AI Choice — after each user message, an LLM call picks which AI participant speaks next and triggers them
   - Everyone Gets Turn — after each user message, all present non-user participants speak in order of the participants list
-- Reply length — text-size button opens a popup to select one of five response length levels; each adds a system-prompt instruction shaping the reply; the global `max_tokens` cap (configured in API Settings) applies to all levels:
+- Reply length — text-size button opens a popup to select one of five response length levels; each adds a system-prompt instruction shaping the reply; the active endpoint's `max_tokens` cap applies to all levels:
   - One sentence
   - A few sentences (default)
   - Short paragraph

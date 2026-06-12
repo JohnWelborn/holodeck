@@ -88,18 +88,101 @@ function importCharacterCard(file) {
 // ═══════════════════════════════════════════════════════════════════
 //  API SETTINGS
 // ═══════════════════════════════════════════════════════════════════
-var apiSettings = { baseUrl: 'http://localhost:1337/v1', model: 'mistral-v7-tekken', token: '', censor: true, maxTokens: 1500 };
+var apiEndpoints = [
+  { id: genId('endpoint'), name: 'Default', baseUrl: 'http://localhost:1337/v1', model: 'mistral-v7-tekken', token: '', maxTokens: 1500 }
+];
+var activeEndpointId = apiEndpoints[0].id;
+var apiSettings = { baseUrl: '', model: '', token: '', maxTokens: 1500, censor: true };
 if (new URLSearchParams(location.search).get('censor') === 'false') apiSettings.censor = false;
-document.getElementById('api-url').value        = apiSettings.baseUrl;
-document.getElementById('api-model').value      = apiSettings.model;
-document.getElementById('api-token').value      = apiSettings.token;
-document.getElementById('api-max-tokens').value = apiSettings.maxTokens;
-function updateApiSettings() {
-  apiSettings.baseUrl    = document.getElementById('api-url').value.trim() || 'http://localhost:1337/v1';
-  apiSettings.model      = document.getElementById('api-model').value.trim() || 'mistral-v7-tekken';
-  apiSettings.token      = document.getElementById('api-token').value.trim();
-  apiSettings.maxTokens  = parseInt(document.getElementById('api-max-tokens').value, 10) || 1500;
+
+function getActiveEndpoint() {
+  return apiEndpoints.find(function(e) { return e.id === activeEndpointId; }) || apiEndpoints[0];
+}
+function applyActiveEndpoint() {
+  var ep = getActiveEndpoint();
+  activeEndpointId = ep.id;
+  apiSettings.baseUrl   = ep.baseUrl;
+  apiSettings.model     = ep.model;
+  apiSettings.token     = ep.token;
+  apiSettings.maxTokens = ep.maxTokens;
+  document.getElementById('active-endpoint-label-text').textContent = ep.name;
+  renderEndpointMenu();
+}
+applyActiveEndpoint();
+
+// ─── Endpoint selector dropdown (top bar) ────────────────────────
+function toggleTopbarEndpointMenu(event) {
+  event.stopPropagation();
+  var menu = document.getElementById('endpoint-menu-topbar');
+  var isVisible = menu.style.display !== 'none';
+  if (isVisible) { menu.style.display = 'none'; return; }
+  var btn = document.getElementById('active-endpoint-label');
+  var rect = btn.getBoundingClientRect();
+  menu.style.right = (window.innerWidth - rect.right) + 'px';
+  menu.style.left  = 'auto';
+  menu.style.top   = (rect.bottom + 4) + 'px';
+  menu.style.display = 'block';
+}
+document.addEventListener('click', function(e) {
+  var menu = document.getElementById('endpoint-menu-topbar');
+  if (!menu || menu.style.display === 'none') return;
+  var btn = document.getElementById('active-endpoint-label');
+  if (!menu.contains(e.target) && !btn.contains(e.target)) menu.style.display = 'none';
+});
+function selectApiEndpoint(id) {
+  activeEndpointId = id;
+  applyActiveEndpoint();
+  document.getElementById('endpoint-menu-topbar').style.display = 'none';
   scheduleSave();
+}
+function deleteApiEndpoint(id) {
+  if (apiEndpoints.length <= 1) return;
+  var ep = apiEndpoints.find(function(e) { return e.id === id; });
+  if (!ep) return;
+  showConfirm('Delete endpoint', '"' + ep.name + '" will be removed.', function() {
+    apiEndpoints = apiEndpoints.filter(function(e) { return e.id !== id; });
+    if (activeEndpointId === id) activeEndpointId = apiEndpoints[0].id;
+    applyActiveEndpoint();
+    scheduleSave();
+  });
+}
+function renderEndpointMenu() {
+  var menu = document.getElementById('endpoint-menu-topbar');
+  menu.innerHTML = '';
+  apiEndpoints.forEach(function(ep) {
+    var item = document.createElement('div');
+    item.className = 'auto-mode-item endpoint-menu-item' + (ep.id === activeEndpointId ? ' auto-mode-item-active' : '');
+    var label = document.createElement('span');
+    label.textContent = ep.name;
+    label.onclick = function() { selectApiEndpoint(ep.id); };
+    item.appendChild(label);
+
+    var edit = document.createElement('i');
+    edit.className = 'ti ti-pencil endpoint-menu-item-action';
+    edit.title = 'Edit endpoint';
+    edit.style.fontSize = '13px';
+    edit.onclick = function(e) { e.stopPropagation(); document.getElementById('endpoint-menu-topbar').style.display = 'none'; openModal('endpoint', ep.id); };
+    item.appendChild(edit);
+
+    if (apiEndpoints.length > 1) {
+      var del = document.createElement('i');
+      del.className = 'ti ti-trash endpoint-menu-item-action endpoint-menu-item-delete';
+      del.title = 'Delete endpoint';
+      del.style.fontSize = '13px';
+      del.onclick = function(e) { e.stopPropagation(); deleteApiEndpoint(ep.id); };
+      item.appendChild(del);
+    }
+
+    menu.appendChild(item);
+  });
+  var addItem = document.createElement('div');
+  addItem.className = 'auto-mode-item';
+  addItem.textContent = '+ Add endpoint';
+  addItem.onclick = function() {
+    document.getElementById('endpoint-menu-topbar').style.display = 'none';
+    openModal('endpoint', null);
+  };
+  menu.appendChild(addItem);
 }
 var settingsOpen = false;
 function toggleSettings() {
@@ -188,8 +271,8 @@ function openModal(type, editId) {
   document.getElementById('modal-overlay').classList.add('open');
   document.getElementById('modal-box').classList.add('open');
 
-  if (type === 'direction' || type === 'closing' || type === 'content-policy') currentModalTab = 'new';
-  var titles = { env:'Environments', scen:'Scenarios', participant:'Participants', trait:'Traits', direction:'Direction', closing:'Direction', 'content-policy':'Direction' };
+  if (type === 'direction' || type === 'closing' || type === 'content-policy' || type === 'endpoint') currentModalTab = 'new';
+  var titles = { env:'Environments', scen:'Scenarios', participant:'Participants', trait:'Traits', direction:'Direction', closing:'Direction', 'content-policy':'Direction', endpoint:'API Endpoint' };
   document.getElementById('modal-title').textContent = titles[type] || '';
   document.getElementById('modal-subtitle').textContent = editId ? 'Editing' : '';
 
@@ -251,6 +334,8 @@ function renderModalContent() {
       document.getElementById('modal-subtitle').textContent = 'Closing Instruction';
     } else if (currentModal === 'content-policy') {
       document.getElementById('modal-subtitle').textContent = 'Content Policy';
+    } else if (currentModal === 'endpoint') {
+      document.getElementById('modal-subtitle').textContent = editingItemId ? 'Editing' : 'New';
     } else {
       // Show a back-arrow in the subtitle area when not editing
       document.getElementById('modal-subtitle').innerHTML = editingItemId
@@ -261,7 +346,7 @@ function renderModalContent() {
     footer.style.display = 'flex';
     var saveBtn = document.getElementById('modal-save-btn');
     var noteEl  = document.getElementById('modal-footer-note');
-    if (currentModal === 'direction' || currentModal === 'closing' || currentModal === 'content-policy') {
+    if (currentModal === 'direction' || currentModal === 'closing' || currentModal === 'content-policy' || currentModal === 'endpoint') {
       saveBtn.textContent = 'Save';
       noteEl.textContent  = '';
     } else if (editingItemId) {
@@ -508,6 +593,7 @@ function renderFormTab(container) {
   else if (currentModal === 'direction')   renderDirectionForm(container);
   else if (currentModal === 'closing')        renderClosingForm(container);
   else if (currentModal === 'content-policy') renderContentPolicyForm(container);
+  else if (currentModal === 'endpoint')       renderEndpointForm(container);
 }
 
 function renderEnvForm(container) {
@@ -673,6 +759,7 @@ function saveModalForm() {
   else if (currentModal === 'direction')   saveDirection();
   else if (currentModal === 'closing')        saveClosing();
   else if (currentModal === 'content-policy') saveContentPolicy();
+  else if (currentModal === 'endpoint')       saveApiEndpoint();
 }
 
 function saveEnv() {
@@ -924,6 +1011,66 @@ function renderContentPolicyForm(container) {
 
 function saveContentPolicy() {
   programState.contentPolicy = (document.getElementById('f-content-policy').value || '').trim();
+  closeModal();
+  scheduleSave();
+}
+
+function renderEndpointForm(container) {
+  var prefill = editingItemId ? apiEndpoints.find(function(e){ return e.id===editingItemId; }) : null;
+  container.innerHTML = [
+    '<div class="form-group">',
+    '  <label class="form-label">Name</label>',
+    '  <input class="form-input" id="f-endpoint-name" type="text" placeholder="e.g., Local Mistral, OpenRouter…">',
+    '</div>',
+    '<div class="form-group">',
+    '  <label class="form-label">Base URL</label>',
+    '  <input class="form-input" id="f-endpoint-url" type="text" placeholder="http://localhost:1337/v1">',
+    '</div>',
+    '<div class="form-group">',
+    '  <label class="form-label">Model</label>',
+    '  <input class="form-input" id="f-endpoint-model" type="text" placeholder="mistral-v7-tekken">',
+    '</div>',
+    '<div class="form-group">',
+    '  <label class="form-label">API Token</label>',
+    '  <input class="form-input" id="f-endpoint-token" type="password" placeholder="sk-…" autocomplete="off">',
+    '</div>',
+    '<div class="form-group">',
+    '  <label class="form-label">Max tokens</label>',
+    '  <input class="form-input" id="f-endpoint-max-tokens" type="number" placeholder="1500">',
+    '</div>',
+    '<div class="form-group">',
+    '  <button type="button" id="endpoint-test-btn" onclick="testEndpointConnection()" class="btn-primary" style="width:100%;padding:6px 12px;font-size:12px;">Test Connection</button>',
+    '  <div class="api-status" id="endpoint-test-status" style="color:var(--color-text-tertiary);"></div>',
+    '</div>'
+  ].join('');
+  document.getElementById('f-endpoint-name').value       = prefill ? prefill.name      : 'New Endpoint';
+  document.getElementById('f-endpoint-url').value        = prefill ? prefill.baseUrl   : 'http://localhost:1337/v1';
+  document.getElementById('f-endpoint-model').value      = prefill ? prefill.model     : '';
+  document.getElementById('f-endpoint-token').value      = prefill ? prefill.token     : '';
+  document.getElementById('f-endpoint-max-tokens').value = prefill ? prefill.maxTokens : 1500;
+  setTimeout(function(){
+    var el = document.getElementById('f-endpoint-name');
+    if (el) { el.focus(); el.select(); }
+  }, 40);
+}
+
+function saveApiEndpoint() {
+  var name = (document.getElementById('f-endpoint-name').value || '').trim();
+  if (!name) { highlightRequired('f-endpoint-name'); return; }
+  var baseUrl   = (document.getElementById('f-endpoint-url').value || '').trim() || 'http://localhost:1337/v1';
+  var model     = (document.getElementById('f-endpoint-model').value || '').trim();
+  var token     = (document.getElementById('f-endpoint-token').value || '').trim();
+  var maxTokens = parseInt(document.getElementById('f-endpoint-max-tokens').value, 10) || 1500;
+
+  var ep = editingItemId ? apiEndpoints.find(function(e){ return e.id===editingItemId; }) : null;
+  if (ep) {
+    ep.name = name; ep.baseUrl = baseUrl; ep.model = model; ep.token = token; ep.maxTokens = maxTokens;
+  } else {
+    ep = { id: genId('endpoint'), name: name, baseUrl: baseUrl, model: model, token: token, maxTokens: maxTokens };
+    apiEndpoints.push(ep);
+    activeEndpointId = ep.id;
+  }
+  applyActiveEndpoint();
   closeModal();
   scheduleSave();
 }
@@ -1383,18 +1530,28 @@ function apiEndpoint() {
 }
 
 // ═══════════════════════════════════════════════════════════════════
-//  TEST CONNECTION
+//  TEST CONNECTION (from the API Endpoint modal)
 // ═══════════════════════════════════════════════════════════════════
-async function testConnection() {
-  var btn = document.getElementById('test-connection-btn');
+async function testEndpointConnection() {
+  var btn = document.getElementById('endpoint-test-btn');
+  var statusEl = document.getElementById('endpoint-test-status');
   btn.disabled = true;
   btn.style.opacity = '0.6';
-  setApiStatus('Testing…', 'var(--color-text-secondary)');
+  statusEl.textContent = 'Testing…';
+  statusEl.style.color = 'var(--color-text-secondary)';
 
-  var url = apiEndpoint();
-  var headers = buildHeaders();
+  var baseUrl = (document.getElementById('f-endpoint-url').value || '').trim() || 'http://localhost:1337/v1';
+  var model   = (document.getElementById('f-endpoint-model').value || '').trim();
+  var token   = (document.getElementById('f-endpoint-token').value || '').trim();
+
+  var url = baseUrl.replace(/\/+$/, '') + '/chat/completions';
+  var headers = { 'Content-Type': 'application/json' };
+  if (token) headers['Authorization'] = 'Bearer ' + token;
+  var redactedHeaders = headers.Authorization
+    ? Object.assign({}, headers, { Authorization: 'Bearer …' + (token.length > 4 ? token.slice(-4) : token) })
+    : headers;
   var body = {
-    model: apiSettings.model,
+    model: model,
     max_tokens: 10,
     stream: false,
     messages: [
@@ -1405,7 +1562,7 @@ async function testConnection() {
 
   console.group('%c[Holodeck] API Test → Connection', 'color:#56c99a;font-weight:bold;');
   console.log('%cURL', 'color:#888', url);
-  console.log('%cHeaders', 'color:#888', redactHeaders(headers));
+  console.log('%cHeaders', 'color:#888', redactedHeaders);
   console.log('%cRequest body', 'color:#888', body);
 
   try {
@@ -1416,18 +1573,21 @@ async function testConnection() {
     console.log('%cResponse', 'color:#888', parsed);
     if (!res.ok) {
       var msg = (parsed && parsed.error && (parsed.error.message || parsed.error)) || ('HTTP ' + res.status);
-      setApiStatus('✗ ' + (typeof msg === 'string' ? msg : JSON.stringify(msg)), '#d97070');
+      statusEl.textContent = '✗ ' + (typeof msg === 'string' ? msg : JSON.stringify(msg));
+      statusEl.style.color = '#d97070';
     } else {
       var reply = parsed && parsed.choices && parsed.choices[0] && parsed.choices[0].message && parsed.choices[0].message.content;
       if (reply && reply.trim()) {
-        setApiStatus('✓ ' + reply.trim(), 'var(--active-color)');
+        statusEl.textContent = '✓ ' + reply.trim();
       } else {
-        setApiStatus('✓ Connected (empty reply)', 'var(--active-color)');
+        statusEl.textContent = '✓ Connected (empty reply)';
       }
+      statusEl.style.color = 'var(--active-color)';
     }
   } catch (err) {
     console.error('%cResponse error', 'color:#d97070', err);
-    setApiStatus('✗ ' + err.message, '#d97070');
+    statusEl.textContent = '✗ ' + err.message;
+    statusEl.style.color = '#d97070';
   } finally {
     btn.disabled = false;
     btn.style.opacity = '';
@@ -3455,7 +3615,8 @@ function saveToStorage() {
       programsStore: programsStore,
       treeData: treeData,
       characterTreeData: characterTreeData,
-      apiSettings: { baseUrl: apiSettings.baseUrl, model: apiSettings.model, token: apiSettings.token, maxTokens: apiSettings.maxTokens },
+      apiEndpoints: apiEndpoints,
+      activeEndpointId: activeEndpointId,
       activeProgramId: activeProgramId
     }));
   } catch(e) {
@@ -3473,11 +3634,13 @@ function loadFromStorage() {
   try {
     var apiBackup = localStorage.getItem('holodeck_api');
     if (apiBackup) {
-      Object.assign(apiSettings, JSON.parse(apiBackup));
+      var backup = JSON.parse(apiBackup);
+      if (backup.apiEndpoints && backup.apiEndpoints.length) {
+        apiEndpoints = backup.apiEndpoints;
+        activeEndpointId = backup.activeEndpointId || apiEndpoints[0].id;
+      }
       localStorage.removeItem('holodeck_api');
-      document.getElementById('api-url').value   = apiSettings.baseUrl;
-      document.getElementById('api-model').value = apiSettings.model;
-      document.getElementById('api-token').value = apiSettings.token;
+      applyActiveEndpoint();
     }
     var raw = localStorage.getItem(STORAGE_KEY);
     if (!raw) return;
@@ -3496,13 +3659,21 @@ function loadFromStorage() {
       characterTreeData.splice(0, characterTreeData.length);
       saved.characterTreeData.forEach(function(i){ characterTreeData.push(i); });
     }
-    if (saved.apiSettings) {
-      Object.assign(apiSettings, saved.apiSettings);
-      if (!apiSettings.maxTokens) apiSettings.maxTokens = 1500;
-      document.getElementById('api-url').value        = apiSettings.baseUrl;
-      document.getElementById('api-model').value      = apiSettings.model;
-      document.getElementById('api-token').value      = apiSettings.token;
-      document.getElementById('api-max-tokens').value = apiSettings.maxTokens;
+    if (saved.apiEndpoints && saved.apiEndpoints.length) {
+      apiEndpoints = saved.apiEndpoints;
+      activeEndpointId = saved.activeEndpointId || apiEndpoints[0].id;
+      applyActiveEndpoint();
+    } else if (saved.apiSettings) {
+      var legacy = saved.apiSettings;
+      apiEndpoints = [{
+        id: genId('endpoint'), name: 'Default',
+        baseUrl: legacy.baseUrl || 'http://localhost:1337/v1',
+        model: legacy.model || 'mistral-v7-tekken',
+        token: legacy.token || '',
+        maxTokens: legacy.maxTokens || 1500
+      }];
+      activeEndpointId = apiEndpoints[0].id;
+      applyActiveEndpoint();
     }
     if (saved.activeProgramId && programsStore[saved.activeProgramId]) {
       activeProgramId = saved.activeProgramId;
@@ -3530,7 +3701,7 @@ function loadFromStorage() {
 
 function clearStorage() {
   showConfirm('Reset to defaults', 'Reset everything to defaults? All programs and transcript history will be lost. API settings will be kept.', function() {
-    localStorage.setItem('holodeck_api', JSON.stringify(apiSettings));
+    localStorage.setItem('holodeck_api', JSON.stringify({ apiEndpoints: apiEndpoints, activeEndpointId: activeEndpointId }));
     localStorage.removeItem(STORAGE_KEY);
     location.reload();
   });
@@ -3542,7 +3713,8 @@ function exportData() {
     library: library,
     programsStore: programsStore,
     treeData: treeData,
-    apiSettings: { baseUrl: apiSettings.baseUrl, model: apiSettings.model },
+    apiEndpoints: apiEndpoints.map(function(ep) { return { id: ep.id, name: ep.name, baseUrl: ep.baseUrl, model: ep.model, maxTokens: ep.maxTokens }; }),
+    activeEndpointId: activeEndpointId,
     activeProgramId: activeProgramId
   };
   var blob = new Blob([JSON.stringify(payload, null, 2)], { type: 'application/json' });
@@ -3564,12 +3736,26 @@ function importData() {
       try {
         var data = JSON.parse(e.target.result);
         if (!data.programsStore || !data.treeData) throw new Error('Invalid holodeck file.');
-        var mergedApi = Object.assign({}, data.apiSettings || {}, { token: apiSettings.token });
+        var mergedEndpoints, mergedActiveId;
+        if (data.apiEndpoints && data.apiEndpoints.length) {
+          mergedEndpoints = data.apiEndpoints.map(function(ep) {
+            var existing = apiEndpoints.find(function(e) { return e.id === ep.id; });
+            return Object.assign({ token: '', maxTokens: 1500 }, ep, { token: existing ? existing.token : '' });
+          });
+          mergedActiveId = data.activeEndpointId || mergedEndpoints[0].id;
+        } else if (data.apiSettings) {
+          mergedEndpoints = [{ id: genId('endpoint'), name: 'Default', baseUrl: data.apiSettings.baseUrl || 'http://localhost:1337/v1', model: data.apiSettings.model || 'mistral-v7-tekken', token: apiSettings.token, maxTokens: data.apiSettings.maxTokens || 1500 }];
+          mergedActiveId = mergedEndpoints[0].id;
+        } else {
+          mergedEndpoints = apiEndpoints;
+          mergedActiveId = activeEndpointId;
+        }
         localStorage.setItem(STORAGE_KEY, JSON.stringify({
           library: data.library || { environments: [], scenarios: [], traits: [] },
           programsStore: data.programsStore,
           treeData: data.treeData,
-          apiSettings: mergedApi,
+          apiEndpoints: mergedEndpoints,
+          activeEndpointId: mergedActiveId,
           activeProgramId: data.activeProgramId || null
         }));
         location.reload();

@@ -95,6 +95,38 @@
       color: var(--color-text-primary);
     }
 
+    /* ── Endpoint selector menu ── */
+    .endpoint-menu {
+      background: var(--color-background-secondary);
+      border: 0.5px solid var(--color-border-secondary);
+      border-radius: var(--border-radius-md);
+      padding: 4px;
+      box-shadow: 0 4px 16px rgba(0,0,0,0.25);
+    }
+    .endpoint-menu-item {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 8px;
+    }
+    .endpoint-menu-item > span {
+      flex: 1;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+    }
+    .endpoint-menu-item-action {
+      color: var(--color-text-tertiary);
+      flex-shrink: 0;
+      margin-left: 6px;
+    }
+    .endpoint-menu-item-action:hover {
+      color: var(--color-text-primary);
+    }
+    .endpoint-menu-item-delete:hover {
+      color: #d97070;
+    }
+
     /* ── Settings panel ── */
     .settings-panel {
       position: absolute; top: 50px; right: 12px; width: 288px;

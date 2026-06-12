@@ -138,7 +138,12 @@
       <span style="font-size:13px;font-weight:500;letter-spacing:0.8px;">HOLODECK</span>
     </div>
     <div style="display:flex;align-items:center;gap:8px;">
-      <button id="settings-btn" onclick="toggleSettings()" title="API Settings" style="color:var(--color-text-secondary);display:flex;align-items:center;width:28px;height:28px;border-radius:var(--border-radius-md);">
+      <button id="active-endpoint-label" onclick="toggleTopbarEndpointMenu(event)" title="Switch API endpoint" style="display:flex;align-items:center;gap:6px;font-size:11px;color:var(--color-text-secondary);max-width:160px;background:var(--color-background-secondary);border:0.5px solid var(--color-border-secondary);border-radius:var(--border-radius-md);padding:5px 8px;cursor:pointer;">
+        <span id="active-endpoint-label-text" style="overflow:hidden;text-overflow:ellipsis;white-space:nowrap;"></span>
+        <i class="ti ti-chevron-down" style="font-size:11px;flex-shrink:0;"></i>
+      </button>
+      <div id="endpoint-menu-topbar" class="endpoint-menu" style="display:none;position:fixed;z-index:300;min-width:200px;"></div>
+      <button id="settings-btn" onclick="toggleSettings()" title="Settings" style="color:var(--color-text-secondary);display:flex;align-items:center;width:28px;height:28px;border-radius:var(--border-radius-md);">
         <i class="ti ti-settings" style="font-size:16px;"></i>
       </button>
       <div style="width:28px;height:28px;border-radius:50%;background:var(--color-background-secondary);border:0.5px solid var(--color-border-tertiary);display:flex;align-items:center;justify-content:center;font-size:11px;font-weight:500;color:var(--color-text-secondary);">U</div>
@@ -151,28 +156,12 @@
   <!-- ─── Settings panel ──────────────────────────────────────────── -->
   <div class="settings-panel" id="settings-panel">
     <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:13px;">
-      <span style="font-size:11px;font-weight:500;letter-spacing:0.8px;text-transform:uppercase;color:var(--color-text-secondary);">API Settings</span>
+      <span style="font-size:11px;font-weight:500;letter-spacing:0.8px;text-transform:uppercase;color:var(--color-text-secondary);">Settings</span>
       <button onclick="toggleSettings()" style="color:var(--color-text-secondary);display:flex;align-items:center;">
         <i class="ti ti-x" style="font-size:13px;"></i>
       </button>
     </div>
-    <div style="margin-bottom:10px;">
-      <label class="setting-label" for="api-url">Base URL</label>
-      <input class="setting-input" id="api-url" type="text" placeholder="http://localhost:1337/v1" oninput="updateApiSettings()">
-    </div>
-    <div style="margin-bottom:10px;">
-      <label class="setting-label" for="api-model">Model</label>
-      <input class="setting-input" id="api-model" type="text" placeholder="mistral-v7-tekken" oninput="updateApiSettings()">
-    </div>
-    <div style="margin-bottom:10px;">
-      <label class="setting-label" for="api-token">API Token</label>
-      <input class="setting-input" id="api-token" type="password" placeholder="sk-…" autocomplete="off" oninput="updateApiSettings()">
-    </div>
-    <div style="margin-bottom:10px;">
-      <label class="setting-label" for="api-max-tokens">Max tokens</label>
-      <input class="setting-input" id="api-max-tokens" type="number" placeholder="1500" oninput="updateApiSettings()">
-    </div>
-    <button id="test-connection-btn" onclick="testConnection()" class="btn-primary" style="width:100%;padding:6px 12px;font-size:12px;margin-top:2px;">Test Connection</button>
+    <p style="font-size:11px;color:var(--color-text-tertiary);margin:0 0 10px;">Manage API endpoints from the dropdown next to the gear icon.</p>
     <div class="api-status" id="api-status" style="color:var(--color-text-tertiary);"></div>
     <div style="margin-top:14px;padding-top:12px;border-top:0.5px solid var(--color-border-tertiary);display:flex;flex-direction:column;gap:6px;">
       <button onclick="exportData()" class="btn-ghost" style="width:100%;padding:6px 12px;font-size:12px;text-align:left;">Export to file</button>
