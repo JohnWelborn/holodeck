@@ -253,3 +253,16 @@ var treeData = [
   ]},
   { id:'p6', type:'program', name:'Interview Practice' }
 ];
+
+// ═══════════════════════════════════════════════════════════════════
+//  CHARACTERS TREE
+// ═══════════════════════════════════════════════════════════════════
+var characterTreeData = [
+  { id:'cf1', type:'character-folder', name:'Originals', open:true, children:[
+    { id:'c1', type:'character', name:'Commander Ryn' },
+    { id:'c2', type:'character', name:'Dr. Aveline' }
+  ]},
+  { id:'cf2', type:'character-folder', name:'Imported', open:false, children:[
+    { id:'c3', type:'character', name:'Kael Voss' }
+  ]}
+];

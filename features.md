@@ -27,7 +27,11 @@
 
 ---
 
-## Programs Panel
+## Left Panel
+
+The left panel is split into two independently collapsible sections: Programs and Characters. Clicking a section's header (chevron + label) collapses/expands its tree, the same way a folder collapses its children.
+
+### Programs Section
 
 - New Program — opens a dialog to choose manual or AI-generated creation
   - Manual — creates an empty program immediately
@@ -41,6 +45,19 @@
 - New program inside folder
 - New subfolder
 - Drag & drop reorder — before/after/into drop targets with circular-nesting prevention
+
+### Characters Section
+
+Mock-up only — UI for organizing reusable characters into folders, not yet wired to actual character/participant data.
+
+- New Character — creates a placeholder character entry and enters inline rename mode
+- New Folder — creates a folder and enters inline rename mode
+- Folder expand/collapse
+- Inline rename — double-click; confirmed on Enter or blur, cancelled on Escape
+- Delete folder — confirm dialog; only available on empty folders
+- Delete character — confirm dialog
+- New character inside folder
+- New subfolder
 
 ---
 
