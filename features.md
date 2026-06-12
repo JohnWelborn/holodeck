@@ -59,6 +59,7 @@ Mock-up only — UI for organizing reusable characters into folders, not yet wir
 - New character inside folder
 - New subfolder
 - Drag & drop reorder — before/after/into drop targets with circular-nesting prevention
+- Import character card — accepts PNG files with embedded V2 (or V1) chara metadata (same parser as the participant import); creates a new character entry named after the card, with personality, speech, photo, and traits stashed on the entry for future use
 
 ---
 

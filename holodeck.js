@@ -3570,6 +3570,47 @@ function createCharacterItem(parentFolderId) {
   startRenameCharacter(newId);
 }
 
+function importCharacterCardForTree(parentFolderId) {
+  var input = document.createElement('input');
+  input.type = 'file'; input.accept = '.png,.json';
+  input.onchange = function(e) { if (e.target.files[0]) importCharacterCardToTree(e.target.files[0], parentFolderId); };
+  input.click();
+}
+
+function importCharacterCardToTree(file, parentFolderId) {
+  Promise.all([file.arrayBuffer(), readFileAsDataURL(file)]).then(function(results) {
+    var arrayBuffer = results[0];
+    var dataUrl     = results[1];
+    var cardData = parsePngCharaData(arrayBuffer);
+    if (!cardData) {
+      alert('No character card data found in this file.');
+      return;
+    }
+    var personality = [cardData.description, cardData.personality].filter(Boolean).join('\n\n');
+    var tags = (cardData.tags || []).filter(Boolean);
+    var newId   = 'c-' + Date.now();
+    var newItem = {
+      id: newId, type:'character', name: cardData.name || 'New Character',
+      cardData: {
+        personality: personality,
+        speech:      cardData.mes_example || '',
+        photo:       dataUrl,
+        traits:      tags.map(function(tag) { return { id: 'tag-' + tag, name: tag, description: '' }; })
+      }
+    };
+    if (parentFolderId) {
+      var folder = findItem(parentFolderId, characterTreeData);
+      if (folder) { folder.children = folder.children || []; folder.children.push(newItem); folder.open = true; }
+    } else {
+      characterTreeData.push(newItem);
+    }
+    renderCharacterTree();
+    scheduleSave();
+  }).catch(function() {
+    alert('Could not read this file.');
+  });
+}
+
 function startRenameCharacter(id) {
   var el = document.querySelector('#character-tree-container .tree-item[data-id="' + id + '"]');
   if (!el) return;
