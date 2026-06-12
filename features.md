@@ -58,6 +58,7 @@ Mock-up only — UI for organizing reusable characters into folders, not yet wir
 - Delete character — confirm dialog
 - New character inside folder
 - New subfolder
+- Drag & drop reorder — before/after/into drop targets with circular-nesting prevention
 
 ---
 
