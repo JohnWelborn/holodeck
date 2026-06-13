@@ -1024,6 +1024,7 @@ function renderEndpointForm(container) {
     '</div>',
     '<div class="form-group">',
     '  <label class="form-label">Base URL</label>',
+    '  <p class="form-hint">Base API URL only — <code>/chat/completions</code> is appended automatically.<br>For OpenRouter: <code>https://openrouter.ai/api/v1</code></p>',
     '  <input class="form-input" id="f-endpoint-url" type="text" placeholder="http://localhost:1337/v1">',
     '</div>',
     '<div class="form-group">',
@@ -1048,6 +1049,9 @@ function renderEndpointForm(container) {
   document.getElementById('f-endpoint-model').value      = prefill ? prefill.model     : '';
   document.getElementById('f-endpoint-token').value      = prefill ? prefill.token     : '';
   document.getElementById('f-endpoint-max-tokens').value = prefill ? prefill.maxTokens : 1500;
+  document.getElementById('f-endpoint-url').addEventListener('blur', function(){
+    if (this.value.trim()) this.value = normalizeBaseUrl(this.value);
+  });
   setTimeout(function(){
     var el = document.getElementById('f-endpoint-name');
     if (el) { el.focus(); el.select(); }
@@ -1057,7 +1061,7 @@ function renderEndpointForm(container) {
 function saveApiEndpoint() {
   var name = (document.getElementById('f-endpoint-name').value || '').trim();
   if (!name) { highlightRequired('f-endpoint-name'); return; }
-  var baseUrl   = (document.getElementById('f-endpoint-url').value || '').trim() || 'http://localhost:1337/v1';
+  var baseUrl   = normalizeBaseUrl(document.getElementById('f-endpoint-url').value) || 'http://localhost:1337/v1';
   var model     = (document.getElementById('f-endpoint-model').value || '').trim();
   var token     = (document.getElementById('f-endpoint-token').value || '').trim();
   var maxTokens = parseInt(document.getElementById('f-endpoint-max-tokens').value, 10) || 1500;
@@ -1529,6 +1533,12 @@ function apiEndpoint() {
   return apiSettings.baseUrl.replace(/\/+$/, '') + '/chat/completions';
 }
 
+// Strips a trailing /chat/completions or /completions (and trailing slashes)
+// so users who paste a full completions URL still get a working base URL.
+function normalizeBaseUrl(url) {
+  return (url || '').trim().replace(/\/+$/, '').replace(/\/(chat\/completions|completions)$/i, '');
+}
+
 // ═══════════════════════════════════════════════════════════════════
 //  TEST CONNECTION (from the API Endpoint modal)
 // ═══════════════════════════════════════════════════════════════════
@@ -1540,7 +1550,7 @@ async function testEndpointConnection() {
   statusEl.textContent = 'Testing…';
   statusEl.style.color = 'var(--color-text-secondary)';
 
-  var baseUrl = (document.getElementById('f-endpoint-url').value || '').trim() || 'http://localhost:1337/v1';
+  var baseUrl = normalizeBaseUrl(document.getElementById('f-endpoint-url').value) || 'http://localhost:1337/v1';
   var model   = (document.getElementById('f-endpoint-model').value || '').trim();
   var token   = (document.getElementById('f-endpoint-token').value || '').trim();
 
