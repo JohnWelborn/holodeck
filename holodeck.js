@@ -3606,16 +3606,18 @@ function clearIndicators(){document.querySelectorAll('.tree-item').forEach(funct
 function mk(tag,cls){var e=document.createElement(tag);if(cls)e.className=cls;return e;}
 
 function renderTree(){var c=document.getElementById('tree-container');c.innerHTML='';renderLevel(treeData,c,0);}
-function renderLevel(items,container,depth){
+
+// ─── Generic tree renderer, parameterized by cfg ────────────────────
+function renderTreeLevel(items,container,depth,cfg){
   items.forEach(function(item){
     var pad=10+depth*14, el=mk('div','tree-item');
     el.dataset.id=item.id; el.dataset.type=item.type; el.draggable=true;
-    el.style.cssText='padding:5px 10px 5px '+pad+'px;cursor:pointer;'+(item.active?'background:var(--active-bg);border-left:2px solid var(--active-border);color:var(--active-color);':'color:var(--color-text-secondary);');
+    el.style.cssText='padding:5px 10px 5px '+pad+'px;cursor:'+cfg.cursor(item)+';'+(cfg.isActive(item)?'background:var(--active-bg);border-left:2px solid var(--active-border);color:var(--active-color);':'color:var(--color-text-secondary);');
     var tl=mk('div','drop-line top'), bl=mk('div','drop-line bottom'); el.appendChild(tl); el.appendChild(bl);
 
-    if(item.type==='folder'){
+    if(item.type===cfg.folderType){
       var chev=mk('i','ti ti-chevron-'+(item.open?'down':'right')); chev.style.cssText='font-size:11px;flex-shrink:0;';
-      chev.addEventListener('click',function(e){e.stopPropagation();item.open=!item.open;renderTree();}); el.appendChild(chev);
+      chev.addEventListener('click',function(e){e.stopPropagation();item.open=!item.open;cfg.rerender();}); el.appendChild(chev);
       var fi=mk('i','ti ti-folder'); fi.style.cssText='font-size:14px;flex-shrink:0;'; el.appendChild(fi);
       var nm=mk('span','tree-label'); nm.textContent=item.name; nm.style.cssText='flex:1;overflow:hidden;text-overflow:ellipsis;'; el.appendChild(nm);
       // Folder action icons
@@ -3625,115 +3627,114 @@ function renderLevel(items,container,depth){
         df.title='Delete folder';
         df.addEventListener('click',function(e){
           e.stopPropagation();
-          showConfirm('Delete folder', 'Delete folder "' + item.name + '"?', function(){ removeItem(item.id); renderTree(); scheduleSave(); });
+          showConfirm('Delete folder', 'Delete folder "' + item.name + '"?', function(){ cfg.deleteFolder(item); });
         });
         el.appendChild(df);
       }
       var ap=mk('i','ti ti-plus'); ap.style.cssText='font-size:12px;cursor:pointer;flex-shrink:0;opacity:0.5;';
-      ap.title='New program in folder';
-      ap.addEventListener('click',function(e){e.stopPropagation();createProgram(item.id);}); el.appendChild(ap);
+      ap.title=cfg.createLeafLabel;
+      ap.addEventListener('click',function(e){e.stopPropagation();cfg.createLeaf(item.id);}); el.appendChild(ap);
       var af=mk('i','ti ti-folder-plus'); af.style.cssText='font-size:12px;cursor:pointer;flex-shrink:0;margin-left:3px;opacity:0.5;';
       af.title='New subfolder';
-      af.addEventListener('click',function(e){e.stopPropagation();createFolder(item.id);}); el.appendChild(af);
+      af.addEventListener('click',function(e){e.stopPropagation();cfg.createFolder(item.id);}); el.appendChild(af);
       // Double-click to rename
-      nm.addEventListener('dblclick',function(e){e.stopPropagation();startRename(item.id);});
+      nm.addEventListener('dblclick',function(e){e.stopPropagation();cfg.startRename(item.id);});
     } else {
       var sp=mk('span'); sp.style.cssText='width:11px;flex-shrink:0;'; el.appendChild(sp);
-      var mi=mk('i','ti ti-message'); mi.style.cssText='font-size:12px;flex-shrink:0;'; el.appendChild(mi);
+      var mi=mk('i',cfg.leafIcon); mi.style.cssText='font-size:12px;flex-shrink:0;'; el.appendChild(mi);
       var nm=mk('span','tree-label'); nm.textContent=item.name; nm.style.cssText='flex:1;overflow:hidden;text-overflow:ellipsis;'; el.appendChild(nm);
-      // Delete program button
+      if(cfg.extraLeafAction){
+        var ad=mk('i',cfg.extraLeafAction.icon); ad.style.cssText='font-size:12px;cursor:pointer;flex-shrink:0;opacity:0.5;margin-left:2px;';
+        ad.title=cfg.extraLeafAction.title;
+        ad.addEventListener('click',function(e){e.stopPropagation();cfg.extraLeafAction.handler(item.id);});
+        el.appendChild(ad);
+      }
+      // Delete leaf button
       var dp=mk('i','ti ti-trash tree-prog-del'); dp.style.cssText='font-size:12px;cursor:pointer;flex-shrink:0;opacity:0.5;margin-left:2px;';
-      dp.title='Delete program';
+      dp.title=cfg.deleteLeafLabel;
       dp.addEventListener('click',function(e){
         e.stopPropagation();
-        showConfirm('Delete program', 'Delete "' + item.name + '"? This cannot be undone.', function(){ deleteProgram(item.id); });
+        cfg.deleteLeaf(item);
       });
       el.appendChild(dp);
-      // Click to switch program
+      // Click to activate leaf
       el.addEventListener('click', function(e){
-        if (draggedId) return;
-        switchProgram(item.id);
+        if (cfg.getDragId()) return;
+        cfg.onLeafClick(item.id);
       });
       // Double-click to rename
-      nm.addEventListener('dblclick',function(e){e.stopPropagation();startRename(item.id);});
+      nm.addEventListener('dblclick',function(e){e.stopPropagation();cfg.startRename(item.id);});
     }
-    el.addEventListener('dragstart',function(e){draggedId=this.dataset.id;e.dataTransfer.effectAllowed='move';e.dataTransfer.setData('text/plain',draggedId);var s=this;setTimeout(function(){s.style.opacity='0.35';},0);});
-    el.addEventListener('dragover',function(e){e.preventDefault();e.stopPropagation();if(this.dataset.id===draggedId||isAncestor(draggedId,this.dataset.id))return;clearIndicators();var rect=this.getBoundingClientRect(),y=e.clientY-rect.top,h=rect.height,isF=this.dataset.type==='folder';if(isF&&y>h*0.28&&y<h*0.72){this.style.outline='1.5px solid #1D9E75';this.style.borderRadius='3px';this._dp='into';}else if(y<=h*0.5){this.querySelector('.drop-line.top').style.display='block';this._dp='before';}else{this.querySelector('.drop-line.bottom').style.display='block';this._dp='after';}});
+    el.addEventListener('dragstart',function(e){cfg.setDragId(this.dataset.id);e.dataTransfer.effectAllowed='move';e.dataTransfer.setData('text/plain',cfg.getDragId());var s=this;setTimeout(function(){s.style.opacity='0.35';},0);});
+    el.addEventListener('dragover',function(e){e.preventDefault();e.stopPropagation();if(this.dataset.id===cfg.getDragId()||isAncestor(cfg.getDragId(),this.dataset.id,cfg.array))return;clearIndicators();var rect=this.getBoundingClientRect(),y=e.clientY-rect.top,h=rect.height,isF=this.dataset.type===cfg.folderType;if(isF&&y>h*0.28&&y<h*0.72){this.style.outline='1.5px solid #1D9E75';this.style.borderRadius='3px';this._dp='into';}else if(y<=h*0.5){this.querySelector('.drop-line.top').style.display='block';this._dp='before';}else{this.querySelector('.drop-line.bottom').style.display='block';this._dp='after';}});
     el.addEventListener('dragleave',function(e){if(!this.contains(e.relatedTarget)){this.style.outline='';this.style.borderRadius='';var t=this.querySelector('.drop-line.top'),b=this.querySelector('.drop-line.bottom');if(t)t.style.display='none';if(b)b.style.display='none';}});
-    el.addEventListener('drop',function(e){e.preventDefault();e.stopPropagation();var tid=this.dataset.id,pos=this._dp||'after';if(tid===draggedId||isAncestor(draggedId,tid))return;clearIndicators();var moved=removeItem(draggedId);if(moved){insertItem(moved,tid,pos);renderTree();scheduleSave();}});
-    el.addEventListener('dragend',function(){clearIndicators();draggedId=null;renderTree();});
+    el.addEventListener('drop',function(e){e.preventDefault();e.stopPropagation();var tid=this.dataset.id,pos=this._dp||'after';if(tid===cfg.getDragId()||isAncestor(cfg.getDragId(),tid,cfg.array))return;clearIndicators();var moved=removeItem(cfg.getDragId(),cfg.array);if(moved){insertItem(moved,tid,pos,cfg.array);cfg.rerender();scheduleSave();}});
+    el.addEventListener('dragend',function(){clearIndicators();cfg.setDragId(null);cfg.rerender();});
     container.appendChild(el);
-    if(item.type==='folder'&&item.open&&item.children)renderLevel(item.children,container,depth+1);
+    if(item.type===cfg.folderType&&item.open&&item.children)renderTreeLevel(item.children,container,depth+1,cfg);
   });
+}
+
+var PROGRAM_TREE_CFG = {
+  array: treeData,
+  folderType: 'folder',
+  leafIcon: 'ti ti-message',
+  isActive: function(item){ return !!item.active; },
+  cursor: function(item){ return 'pointer'; },
+  getDragId: function(){ return draggedId; },
+  setDragId: function(v){ draggedId = v; },
+  rerender: renderTree,
+  startRename: startRename,
+  createLeaf: createProgram,
+  createLeafLabel: 'New program in folder',
+  createFolder: createFolder,
+  deleteFolder: function(item){ removeItem(item.id); renderTree(); scheduleSave(); },
+  deleteLeafLabel: 'Delete program',
+  deleteLeaf: function(item){
+    showConfirm('Delete program', 'Delete "' + item.name + '"? This cannot be undone.', function(){ deleteProgram(item.id); });
+  },
+  onLeafClick: switchProgram,
+  extraLeafAction: null
+};
+
+function renderLevel(items,container,depth){
+  renderTreeLevel(items,container,depth,PROGRAM_TREE_CFG);
 }
 
 // ═══════════════════════════════════════════════════════════════════
 //  CHARACTERS TREE
 // ═══════════════════════════════════════════════════════════════════
 function renderCharacterTree(){var c=document.getElementById('character-tree-container');c.innerHTML='';renderCharacterLevel(characterTreeData,c,0);}
-function renderCharacterLevel(items,container,depth){
-  items.forEach(function(item){
-    var pad=10+depth*14, el=mk('div','tree-item');
-    el.dataset.id=item.id; el.dataset.type=item.type; el.draggable=true;
-    var isActive = item.type==='character' && item.id===activeCharacterId;
-    el.style.cssText='padding:5px 10px 5px '+pad+'px;cursor:'+(item.type==='character'?'pointer':'default')+';'+(isActive?'background:var(--active-bg);border-left:2px solid var(--active-border);color:var(--active-color);':'color:var(--color-text-secondary);');
-    var tl=mk('div','drop-line top'), bl=mk('div','drop-line bottom'); el.appendChild(tl); el.appendChild(bl);
 
-    if(item.type==='character-folder'){
-      var chev=mk('i','ti ti-chevron-'+(item.open?'down':'right')); chev.style.cssText='font-size:11px;flex-shrink:0;';
-      chev.addEventListener('click',function(e){e.stopPropagation();item.open=!item.open;renderCharacterTree();}); el.appendChild(chev);
-      var fi=mk('i','ti ti-folder'); fi.style.cssText='font-size:14px;flex-shrink:0;'; el.appendChild(fi);
-      var nm=mk('span','tree-label'); nm.textContent=item.name; nm.style.cssText='flex:1;overflow:hidden;text-overflow:ellipsis;'; el.appendChild(nm);
-      if (!item.children || item.children.length === 0) {
-        var df=mk('i','ti ti-trash tree-prog-del'); df.style.cssText='font-size:12px;cursor:pointer;flex-shrink:0;opacity:0.5;margin-right:3px;';
-        df.title='Delete folder';
-        df.addEventListener('click',function(e){
-          e.stopPropagation();
-          showConfirm('Delete folder', 'Delete folder "' + item.name + '"?', function(){ removeItem(item.id, characterTreeData); renderCharacterTree(); scheduleSave(); });
-        });
-        el.appendChild(df);
-      }
-      var ap=mk('i','ti ti-plus'); ap.style.cssText='font-size:12px;cursor:pointer;flex-shrink:0;opacity:0.5;';
-      ap.title='New character in folder';
-      ap.addEventListener('click',function(e){e.stopPropagation();createCharacterItem(item.id);}); el.appendChild(ap);
-      var af=mk('i','ti ti-folder-plus'); af.style.cssText='font-size:12px;cursor:pointer;flex-shrink:0;margin-left:3px;opacity:0.5;';
-      af.title='New subfolder';
-      af.addEventListener('click',function(e){e.stopPropagation();createCharacterFolder(item.id);}); el.appendChild(af);
-      nm.addEventListener('dblclick',function(e){e.stopPropagation();startRenameCharacter(item.id);});
-    } else {
-      var sp=mk('span'); sp.style.cssText='width:11px;flex-shrink:0;'; el.appendChild(sp);
-      var mi=mk('i','ti ti-user'); mi.style.cssText='font-size:12px;flex-shrink:0;'; el.appendChild(mi);
-      var nm=mk('span','tree-label'); nm.textContent=item.name; nm.style.cssText='flex:1;overflow:hidden;text-overflow:ellipsis;'; el.appendChild(nm);
-      var ad=mk('i','ti ti-square-rounded-plus'); ad.style.cssText='font-size:12px;cursor:pointer;flex-shrink:0;opacity:0.5;margin-left:2px;';
-      ad.title='Add to current program';
-      ad.addEventListener('click',function(e){
-        e.stopPropagation();
-        addCharacterToProgram(item.id);
-      });
-      el.appendChild(ad);
-      var dp=mk('i','ti ti-trash tree-prog-del'); dp.style.cssText='font-size:12px;cursor:pointer;flex-shrink:0;opacity:0.5;margin-left:2px;';
-      dp.title='Delete character';
-      dp.addEventListener('click',function(e){
-        e.stopPropagation();
-        showConfirm('Delete character', 'Delete "' + item.name + '"?', function(){
-          removeItem(item.id, characterTreeData);
-          delete characterLibrary[item.id];
-          if (activeCharacterId === item.id) closeCharacterEditor();
-          renderCharacterTree(); scheduleSave();
-        });
-      });
-      el.appendChild(dp);
-      nm.addEventListener('dblclick',function(e){e.stopPropagation();startRenameCharacter(item.id);});
-      el.addEventListener('click',function(e){ if(draggedCharId) return; openCharacterEditor(item.id); });
-    }
-    el.addEventListener('dragstart',function(e){draggedCharId=this.dataset.id;e.dataTransfer.effectAllowed='move';e.dataTransfer.setData('text/plain',draggedCharId);var s=this;setTimeout(function(){s.style.opacity='0.35';},0);});
-    el.addEventListener('dragover',function(e){e.preventDefault();e.stopPropagation();if(this.dataset.id===draggedCharId||isAncestor(draggedCharId,this.dataset.id,characterTreeData))return;clearIndicators();var rect=this.getBoundingClientRect(),y=e.clientY-rect.top,h=rect.height,isF=this.dataset.type==='character-folder';if(isF&&y>h*0.28&&y<h*0.72){this.style.outline='1.5px solid #1D9E75';this.style.borderRadius='3px';this._dp='into';}else if(y<=h*0.5){this.querySelector('.drop-line.top').style.display='block';this._dp='before';}else{this.querySelector('.drop-line.bottom').style.display='block';this._dp='after';}});
-    el.addEventListener('dragleave',function(e){if(!this.contains(e.relatedTarget)){this.style.outline='';this.style.borderRadius='';var t=this.querySelector('.drop-line.top'),b=this.querySelector('.drop-line.bottom');if(t)t.style.display='none';if(b)b.style.display='none';}});
-    el.addEventListener('drop',function(e){e.preventDefault();e.stopPropagation();var tid=this.dataset.id,pos=this._dp||'after';if(tid===draggedCharId||isAncestor(draggedCharId,tid,characterTreeData))return;clearIndicators();var moved=removeItem(draggedCharId,characterTreeData);if(moved){insertItem(moved,tid,pos,characterTreeData);renderCharacterTree();scheduleSave();}});
-    el.addEventListener('dragend',function(){clearIndicators();draggedCharId=null;renderCharacterTree();});
-    container.appendChild(el);
-    if(item.type==='character-folder'&&item.open&&item.children)renderCharacterLevel(item.children,container,depth+1);
-  });
+var CHARACTER_TREE_CFG = {
+  array: characterTreeData,
+  folderType: 'character-folder',
+  leafIcon: 'ti ti-user',
+  isActive: function(item){ return item.type==='character' && item.id===activeCharacterId; },
+  cursor: function(item){ return item.type==='character' ? 'pointer' : 'default'; },
+  getDragId: function(){ return draggedCharId; },
+  setDragId: function(v){ draggedCharId = v; },
+  rerender: renderCharacterTree,
+  startRename: startRenameCharacter,
+  createLeaf: createCharacterItem,
+  createLeafLabel: 'New character in folder',
+  createFolder: createCharacterFolder,
+  deleteFolder: function(item){ removeItem(item.id, characterTreeData); renderCharacterTree(); scheduleSave(); },
+  deleteLeafLabel: 'Delete character',
+  deleteLeaf: function(item){
+    showConfirm('Delete character', 'Delete "' + item.name + '"?', function(){
+      removeItem(item.id, characterTreeData);
+      delete characterLibrary[item.id];
+      if (activeCharacterId === item.id) closeCharacterEditor();
+      renderCharacterTree(); scheduleSave();
+    });
+  },
+  onLeafClick: openCharacterEditor,
+  extraLeafAction: { icon: 'ti ti-square-rounded-plus', title: 'Add to current program', handler: addCharacterToProgram }
+};
+
+function renderCharacterLevel(items,container,depth){
+  renderTreeLevel(items,container,depth,CHARACTER_TREE_CFG);
 }
 
 function createCharacterFolder(parentFolderId) {
