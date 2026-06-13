@@ -1601,6 +1601,48 @@ function renderTranscript() {
 // ═══════════════════════════════════════════════════════════════════
 //  MESSAGE ROW FACTORY
 // ═══════════════════════════════════════════════════════════════════
+function buildMsgActions(regenTitle) {
+  var actions = document.createElement('div');
+  actions.className = 'msg-actions';
+  actions.style.cssText = 'display:none;align-items:center;gap:6px;';
+  var editBtn = document.createElement('i');
+  editBtn.className = 'ti ti-pencil'; editBtn.title = 'Edit';
+  editBtn.style.cssText = 'font-size:11px;color:var(--color-text-secondary);cursor:pointer;';
+  actions.appendChild(editBtn);
+  var deleteBtn = document.createElement('i');
+  deleteBtn.className = 'ti ti-trash'; deleteBtn.title = 'Delete';
+  deleteBtn.style.cssText = 'font-size:11px;color:var(--color-text-secondary);cursor:pointer;';
+  actions.appendChild(deleteBtn);
+  var forkBtn = document.createElement('i');
+  forkBtn.className = 'ti ti-git-fork'; forkBtn.title = 'Fork';
+  forkBtn.style.cssText = 'font-size:11px;color:var(--color-text-secondary);cursor:pointer;';
+  actions.appendChild(forkBtn);
+  var sep = document.createElement('span');
+  sep.style.cssText = 'width:0.5px;height:10px;background:var(--color-border-secondary);display:inline-block;margin:0 3px;';
+  actions.appendChild(sep);
+  var regenBtn = document.createElement('i');
+  regenBtn.className = 'ti ti-refresh';
+  regenBtn.title = regenTitle;
+  regenBtn.style.cssText = 'font-size:11px;color:var(--color-text-secondary);cursor:pointer;';
+  actions.appendChild(regenBtn);
+  var prevBtn = document.createElement('i');
+  prevBtn.className = 'ti ti-chevron-left';
+  prevBtn.title = 'Previous generation';
+  prevBtn.style.cssText = 'font-size:10px;color:var(--color-text-secondary);cursor:pointer;display:none;';
+  actions.appendChild(prevBtn);
+  var genCount = document.createElement('span');
+  genCount.title = 'Generation 1 of 1';
+  genCount.style.cssText = 'font-size:10px;color:var(--color-text-secondary);cursor:default;user-select:none;white-space:nowrap;display:none;';
+  genCount.textContent = '1/1';
+  actions.appendChild(genCount);
+  var nextBtn = document.createElement('i');
+  nextBtn.className = 'ti ti-chevron-right';
+  nextBtn.title = 'Next generation';
+  nextBtn.style.cssText = 'font-size:10px;color:var(--color-text-secondary);cursor:pointer;display:none;';
+  actions.appendChild(nextBtn);
+  return { actions: actions, editBtn: editBtn, deleteBtn: deleteBtn, forkBtn: forkBtn, regenBtn: regenBtn, prevBtn: prevBtn, genCount: genCount, nextBtn: nextBtn };
+}
+
 function createMsgRow(participantId, text, isUserMsg) {
   var p = programState.participants[participantId];
   var row = document.createElement('div');
@@ -1639,45 +1681,8 @@ function createMsgRow(participantId, text, isUserMsg) {
     nameRow.appendChild(ind);
   }
 
-  var actions = document.createElement('div');
-  actions.className = 'msg-actions';
-  actions.style.cssText = 'display:none;align-items:center;gap:6px;';
-  var editBtn = document.createElement('i');
-  editBtn.className = 'ti ti-pencil'; editBtn.title = 'Edit';
-  editBtn.style.cssText = 'font-size:11px;color:var(--color-text-secondary);cursor:pointer;';
-  actions.appendChild(editBtn);
-  var deleteBtn = document.createElement('i');
-  deleteBtn.className = 'ti ti-trash'; deleteBtn.title = 'Delete';
-  deleteBtn.style.cssText = 'font-size:11px;color:var(--color-text-secondary);cursor:pointer;';
-  actions.appendChild(deleteBtn);
-  var forkBtn = document.createElement('i');
-  forkBtn.className = 'ti ti-git-fork'; forkBtn.title = 'Fork';
-  forkBtn.style.cssText = 'font-size:11px;color:var(--color-text-secondary);cursor:pointer;';
-  actions.appendChild(forkBtn);
-  var sep = document.createElement('span');
-  sep.style.cssText = 'width:0.5px;height:10px;background:var(--color-border-secondary);display:inline-block;margin:0 3px;';
-  actions.appendChild(sep);
-  var regenBtn = document.createElement('i');
-  regenBtn.className = 'ti ti-refresh';
-  regenBtn.title = 'Generate new message';
-  regenBtn.style.cssText = 'font-size:11px;color:var(--color-text-secondary);cursor:pointer;';
-  actions.appendChild(regenBtn);
-  var prevBtn = document.createElement('i');
-  prevBtn.className = 'ti ti-chevron-left';
-  prevBtn.title = 'Previous generation';
-  prevBtn.style.cssText = 'font-size:10px;color:var(--color-text-secondary);cursor:pointer;display:none;';
-  actions.appendChild(prevBtn);
-  var genCount = document.createElement('span');
-  genCount.title = 'Generation 1 of 1';
-  genCount.style.cssText = 'font-size:10px;color:var(--color-text-secondary);cursor:default;user-select:none;white-space:nowrap;display:none;';
-  genCount.textContent = '1/1';
-  actions.appendChild(genCount);
-  var nextBtn = document.createElement('i');
-  nextBtn.className = 'ti ti-chevron-right';
-  nextBtn.title = 'Next generation';
-  nextBtn.style.cssText = 'font-size:10px;color:var(--color-text-secondary);cursor:pointer;display:none;';
-  actions.appendChild(nextBtn);
-  nameRow.appendChild(actions);
+  var ma = buildMsgActions('Generate new message');
+  nameRow.appendChild(ma.actions);
   content.appendChild(nameRow);
 
   var bubble = document.createElement('div');
@@ -1692,7 +1697,7 @@ function createMsgRow(participantId, text, isUserMsg) {
   content.appendChild(bubble);
   row.appendChild(content);
 
-  return { row: row, bubble: bubble, editBtn: editBtn, deleteBtn: deleteBtn, regenBtn: regenBtn, prevBtn: prevBtn, nextBtn: nextBtn, genCount: genCount, forkBtn: forkBtn };
+  return { row: row, bubble: bubble, editBtn: ma.editBtn, deleteBtn: ma.deleteBtn, regenBtn: ma.regenBtn, prevBtn: ma.prevBtn, nextBtn: ma.nextBtn, genCount: ma.genCount, forkBtn: ma.forkBtn };
 }
 
 // ═══════════════════════════════════════════════════════════════════
@@ -2750,45 +2755,8 @@ function createDescriptionMsgRow(text) {
   nspan.style.cssText = 'font-size:11px;color:var(--color-text-secondary);font-style:italic;';
   nameRow.appendChild(nspan);
 
-  var actions = document.createElement('div');
-  actions.className = 'msg-actions';
-  actions.style.cssText = 'display:none;align-items:center;gap:6px;';
-  var editBtn = document.createElement('i');
-  editBtn.className = 'ti ti-pencil'; editBtn.title = 'Edit';
-  editBtn.style.cssText = 'font-size:11px;color:var(--color-text-secondary);cursor:pointer;';
-  actions.appendChild(editBtn);
-  var deleteBtn = document.createElement('i');
-  deleteBtn.className = 'ti ti-trash'; deleteBtn.title = 'Delete';
-  deleteBtn.style.cssText = 'font-size:11px;color:var(--color-text-secondary);cursor:pointer;';
-  actions.appendChild(deleteBtn);
-  var forkBtn = document.createElement('i');
-  forkBtn.className = 'ti ti-git-fork'; forkBtn.title = 'Fork';
-  forkBtn.style.cssText = 'font-size:11px;color:var(--color-text-secondary);cursor:pointer;';
-  actions.appendChild(forkBtn);
-  var sep = document.createElement('span');
-  sep.style.cssText = 'width:0.5px;height:10px;background:var(--color-border-secondary);display:inline-block;margin:0 3px;';
-  actions.appendChild(sep);
-  var regenBtn = document.createElement('i');
-  regenBtn.className = 'ti ti-refresh';
-  regenBtn.title = 'Re-describe';
-  regenBtn.style.cssText = 'font-size:11px;color:var(--color-text-secondary);cursor:pointer;';
-  actions.appendChild(regenBtn);
-  var prevBtn = document.createElement('i');
-  prevBtn.className = 'ti ti-chevron-left';
-  prevBtn.title = 'Previous generation';
-  prevBtn.style.cssText = 'font-size:10px;color:var(--color-text-secondary);cursor:pointer;display:none;';
-  actions.appendChild(prevBtn);
-  var genCount = document.createElement('span');
-  genCount.title = 'Generation 1 of 1';
-  genCount.style.cssText = 'font-size:10px;color:var(--color-text-secondary);cursor:default;user-select:none;white-space:nowrap;display:none;';
-  genCount.textContent = '1/1';
-  actions.appendChild(genCount);
-  var nextBtn = document.createElement('i');
-  nextBtn.className = 'ti ti-chevron-right';
-  nextBtn.title = 'Next generation';
-  nextBtn.style.cssText = 'font-size:10px;color:var(--color-text-secondary);cursor:pointer;display:none;';
-  actions.appendChild(nextBtn);
-  nameRow.appendChild(actions);
+  var ma = buildMsgActions('Re-describe');
+  nameRow.appendChild(ma.actions);
   content.appendChild(nameRow);
 
   var bubble = document.createElement('div');
@@ -2802,7 +2770,7 @@ function createDescriptionMsgRow(text) {
   content.appendChild(bubble);
   row.appendChild(content);
 
-  return { row: row, bubble: bubble, editBtn: editBtn, deleteBtn: deleteBtn, regenBtn: regenBtn, prevBtn: prevBtn, nextBtn: nextBtn, genCount: genCount, forkBtn: forkBtn };
+  return { row: row, bubble: bubble, editBtn: ma.editBtn, deleteBtn: ma.deleteBtn, regenBtn: ma.regenBtn, prevBtn: ma.prevBtn, nextBtn: ma.nextBtn, genCount: ma.genCount, forkBtn: ma.forkBtn };
 }
 
 function showAutoModeMenu(event) {
