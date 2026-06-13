@@ -1482,30 +1482,32 @@ var DEFAULT_CLOSING = "Write {name}'s next response. Narrative prose — action 
 
 var DEFAULT_CONTENT_POLICY = 'Content policy: This is a PG-13 story. Keep all content appropriate for a general teenage audience. Avoid explicit sexual content, graphic violence or gore, and strong profanity. Romantic and action content is fine but must remain tasteful and non-graphic. Conflict and tension are allowed; gratuitous or exploitative depictions are not. If the conversation has already violated this policy, decline to continue and say so.';
 
-function buildPrompt(targetId, transcriptOverride) {
-  var target = programState.participants[targetId];
-
-  var envText = programState.environments.map(function(e){
+function buildEnvironmentText() {
+  return programState.environments.map(function(e){
     return e.name + ' — ' + e.description;
   }).join('\n\n');
+}
 
-  var scenText = programState.scenarios.map(function(s){
+function buildScenarioText() {
+  return programState.scenarios.map(function(s){
     return s.name + ' — ' + s.description;
   }).join('\n\n');
+}
 
-  // Current state — target character's active traits
-  var stateBlock = '';
-  if (target.traits && target.traits.length > 0) {
-    var stateLines = target.traits.map(function(t){
-      var name = (typeof t === 'object') ? t.name : t;
-      var desc = (typeof t === 'object' && t.description) ? t.description : '';
-      return desc ? ('- ' + name + ' — ' + desc) : ('- ' + name);
-    });
-    stateBlock = '**Current state:**\n' + stateLines.join('\n');
-  }
+// Current state — target character's active traits
+function buildCharacterStateBlock(target) {
+  if (!target.traits || target.traits.length === 0) return '';
+  var stateLines = target.traits.map(function(t){
+    var name = (typeof t === 'object') ? t.name : t;
+    var desc = (typeof t === 'object' && t.description) ? t.description : '';
+    return desc ? ('- ' + name + ' — ' + desc) : ('- ' + name);
+  });
+  return '**Current state:**\n' + stateLines.join('\n');
+}
 
-  // Cast lines — POV only
-  var castLines = Object.keys(programState.participants)
+// Cast lines — POV only
+function buildCastLines(target, targetId) {
+  return Object.keys(programState.participants)
     .filter(function(id){ return id !== targetId; })
     .map(function(id){
       var p = programState.participants[id];
@@ -1515,17 +1517,34 @@ function buildPrompt(targetId, transcriptOverride) {
       }
       return '**' + p.fullName + '** (' + p.role + ') — ' + perspective;
     });
+}
 
-  // Transcript — filter by which entries the target was present for
+function formatTranscriptMessage(msg) {
+  if (msg.type === 'description') return '[Scene]: ' + msg.text;
+  return msg.speakerName + ': ' + msg.text;
+}
+
+// Transcript — optionally filter by which entries the target was present for
+function buildTranscriptText(transcript, targetId) {
+  var filtered = targetId
+    ? transcript.filter(function(msg){
+        if (!msg.presentCharacters) return true;
+        return msg.presentCharacters.indexOf(targetId) !== -1;
+      })
+    : transcript;
+  return filtered.map(formatTranscriptMessage).join('\n\n');
+}
+
+function buildPrompt(targetId, transcriptOverride) {
+  var target = programState.participants[targetId];
+
+  var envText = buildEnvironmentText();
+  var scenText = buildScenarioText();
+  var stateBlock = buildCharacterStateBlock(target);
+  var castLines = buildCastLines(target, targetId);
+
   var sourceTranscript = transcriptOverride !== undefined ? transcriptOverride : programState.transcript;
-  var filteredTranscript = sourceTranscript.filter(function(msg){
-    if (!msg.presentCharacters) return true;
-    return msg.presentCharacters.indexOf(targetId) !== -1;
-  });
-  var transcriptText = filteredTranscript.map(function(msg){
-    if (msg.type === 'description') return '[Scene]: ' + msg.text;
-    return msg.speakerName + ': ' + msg.text;
-  }).join('\n\n');
+  var transcriptText = buildTranscriptText(sourceTranscript, targetId);
 
   var template = programState.systemPromptBase || DEFAULT_DIRECTION;
   var contentPolicyText = programState.contentPolicy !== undefined ? programState.contentPolicy : DEFAULT_CONTENT_POLICY;
@@ -2460,41 +2479,11 @@ function buildUserSuggestionPrompt(targetId, count, draftText) {
 
   var contentPolicyText = programState.contentPolicy !== undefined ? programState.contentPolicy : DEFAULT_CONTENT_POLICY;
 
-  var envText = programState.environments.map(function(e){
-    return e.name + ' — ' + e.description;
-  }).join('\n\n');
-  var scenText = programState.scenarios.map(function(s){
-    return s.name + ' — ' + s.description;
-  }).join('\n\n');
-
-  var stateBlock = '';
-  if (target.traits && target.traits.length > 0) {
-    var stateLines = target.traits.map(function(t){
-      var tname = (typeof t === 'object') ? t.name : t;
-      var tdesc = (typeof t === 'object' && t.description) ? t.description : '';
-      return tdesc ? ('- ' + tname + ' — ' + tdesc) : ('- ' + tname);
-    });
-    stateBlock = '**Current state:**\n' + stateLines.join('\n');
-  }
-
-  var castLines = Object.keys(programState.participants)
-    .filter(function(id){ return id !== targetId; })
-    .map(function(id){
-      var p = programState.participants[id];
-      var perspective = (target.perspectives && target.perspectives[id]) || '';
-      if (!perspective && target.defaultPerspectives && p.libraryId) {
-        perspective = target.defaultPerspectives[p.libraryId] || '';
-      }
-      return '**' + p.fullName + '** (' + p.role + ') — ' + perspective;
-    });
-
-  var filteredTranscript = programState.transcript.filter(function(msg){
-    if (!msg.presentCharacters) return true;
-    return msg.presentCharacters.indexOf(targetId) !== -1;
-  });
-  var transcriptText = filteredTranscript.map(function(msg){
-    return msg.speakerName + ': ' + msg.text;
-  }).join('\n\n');
+  var envText = buildEnvironmentText();
+  var scenText = buildScenarioText();
+  var stateBlock = buildCharacterStateBlock(target);
+  var castLines = buildCastLines(target, targetId);
+  var transcriptText = buildTranscriptText(programState.transcript, targetId);
 
   var characterSheet = [
     '## Your Character',
@@ -2666,28 +2655,18 @@ function closeDescribeDialog() {
 }
 
 function buildDescribePrompt(instruction, transcriptOverride) {
-  var envText = programState.environments.map(function(e){
-    return e.name + ' — ' + e.description;
-  }).join('\n\n');
-
-  var scenText = programState.scenarios.map(function(s){
-    return s.name + ' — ' + s.description;
-  }).join('\n\n');
+  var envText = buildEnvironmentText();
+  var scenText = buildScenarioText();
 
   var sourceTranscript = transcriptOverride !== undefined ? transcriptOverride : programState.transcript;
-  var transcriptText = sourceTranscript.map(function(msg){
-    if (msg.type === 'description') return '[Scene]: ' + msg.text;
-    return msg.speakerName + ': ' + msg.text;
-  }).join('\n\n');
+  var transcriptText = buildTranscriptText(sourceTranscript, null);
 
   var contentPolicyText = programState.contentPolicy !== undefined ? programState.contentPolicy : DEFAULT_CONTENT_POLICY;
   var systemPrompt = 'You are the narrator of a collaborative fiction. Write a static snapshot of the current scene — where characters are, what they look like, the atmosphere and physical space. Do NOT advance the story. Do NOT have characters perform new actions or speak. Do NOT recap past events. This is a description of this exact frozen moment, nothing more.'
     + (contentPolicyText ? '\n\n' + contentPolicyText : '');
 
   var lastMsg = sourceTranscript.length > 0 ? sourceTranscript[sourceTranscript.length - 1] : null;
-  var lastMsgText = lastMsg
-    ? (lastMsg.type === 'description' ? '[Scene]: ' + lastMsg.text : lastMsg.speakerName + ': ' + lastMsg.text)
-    : '';
+  var lastMsgText = lastMsg ? formatTranscriptMessage(lastMsg) : '';
 
   var userMessage = [
     '## Environment', envText, '',
