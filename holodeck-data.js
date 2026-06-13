@@ -258,22 +258,24 @@ var treeData = [
 //  CHARACTERS TREE
 // ═══════════════════════════════════════════════════════════════════
 var characterTreeData = [
-  { id:'c1', type:'character', name:"Dr. Vasquez" },
-  { id:'c2', type:'character', name:"Cmdr. Reyes" },
-  { id:'c3', type:'character', name:"Kira" },
-  { id:'c4', type:'character', name:"Lt. Torres" },
-  { id:'c5', type:'character', name:"Prof. Aldric" },
-  { id:'c6', type:'character', name:"Captain Osei" },
-  { id:'c7', type:'character', name:"Ambassador Sael" },
-  { id:'c8', type:'character', name:"Maren" },
-  { id:'c9', type:'character', name:"Povik" },
-  { id:'c10', type:'character', name:"Karathos" },
-  { id:'c11', type:'character', name:"Syrath" },
-  { id:'c12', type:'character', name:"Priya" },
-  { id:'c13', type:'character', name:"Rahul" },
-  { id:'c14', type:'character', name:"John" },
-  { id:'c15', type:'character', name:"Stew" },
-  { id:'c16', type:'character', name:"Cleverly" }
+  { id:'cf-examples', type:'character-folder', name:'Examples', open:true, children:[
+    { id:'c1', type:'character', name:"Dr. Vasquez" },
+    { id:'c2', type:'character', name:"Cmdr. Reyes" },
+    { id:'c3', type:'character', name:"Kira" },
+    { id:'c4', type:'character', name:"Lt. Torres" },
+    { id:'c5', type:'character', name:"Prof. Aldric" },
+    { id:'c6', type:'character', name:"Captain Osei" },
+    { id:'c7', type:'character', name:"Ambassador Sael" },
+    { id:'c8', type:'character', name:"Maren" },
+    { id:'c9', type:'character', name:"Povik" },
+    { id:'c10', type:'character', name:"Karathos" },
+    { id:'c11', type:'character', name:"Syrath" },
+    { id:'c12', type:'character', name:"Priya" },
+    { id:'c13', type:'character', name:"Rahul" },
+    { id:'c14', type:'character', name:"John" },
+    { id:'c15', type:'character', name:"Stew" },
+    { id:'c16', type:'character', name:"Cleverly" }
+  ] }
 ];
 
 // ═══════════════════════════════════════════════════════════════════
