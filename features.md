@@ -100,7 +100,7 @@ Message row actions (appear on hover):
 - Prev / Next generation — navigate between variants; arrows dim at boundaries; counter (e.g. 2/3) hidden until 2+ generations exist
 
 Input:
-- Persona chip — shows active speaker; click cycles to next participant
+- Persona chip — shows active speaker; click cycles to next participant; when the active program has no participants (or no persona selected), the chip clears and the input placeholder resets to "Type a message..."
 - Textarea — auto-height; Enter sends, Shift+Enter newline, ArrowUp navigates suggestions
 - Send button
 - Collapse toggle — a ⌄/⌃ button after Send collapses or expands the row above the textarea containing the persona chip and all four mode buttons; when collapsed, Send also hides (use Enter to send); starts expanded

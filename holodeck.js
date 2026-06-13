@@ -2235,19 +2235,33 @@ function deleteParticipant(id) {
 // ═══════════════════════════════════════════════════════════════════
 //  PERSONA SWITCHING
 // ═══════════════════════════════════════════════════════════════════
+function updatePersonaChip() {
+  var uid = programState.userPersonaId;
+  var pp  = uid ? programState.participants[uid] : null;
+  var cp  = document.getElementById('chip-photo');
+  if (pp) {
+    document.getElementById('chip-avatar').style.background = pp.bg;
+    document.getElementById('chip-initials').textContent    = pp.initials;
+    document.getElementById('chip-initials').style.color    = pp.color;
+    if (pp.photo) { cp.src = pp.photo; cp.style.display = ''; }
+    else          { cp.style.display = 'none'; }
+    document.getElementById('chip-name').textContent    = pp.displayName;
+    document.getElementById('msg-input').placeholder    = 'Type a message as ' + pp.displayName + '...';
+  } else {
+    document.getElementById('chip-avatar').style.background = 'transparent';
+    document.getElementById('chip-initials').textContent    = '';
+    document.getElementById('chip-initials').style.color    = '';
+    cp.style.display = 'none';
+    document.getElementById('chip-name').textContent = '';
+    document.getElementById('msg-input').placeholder = 'Type a message...';
+  }
+}
+
 function switchPersona(key) {
   if (key === programState.userPersonaId) return;
   programState.userPersonaId = key;
-  var p = programState.participants[key];
 
-  document.getElementById('chip-avatar').style.background = p.bg;
-  document.getElementById('chip-initials').textContent    = p.initials;
-  document.getElementById('chip-initials').style.color    = p.color;
-  var cp = document.getElementById('chip-photo');
-  if (p.photo) { cp.src = p.photo; cp.style.display = ''; }
-  else         { cp.style.display = 'none'; }
-  document.getElementById('chip-name').textContent     = p.displayName;
-  document.getElementById('msg-input').placeholder     = 'Type a message as ' + p.displayName + '...';
+  updatePersonaChip();
 
   document.querySelectorAll('.persona-indicator').forEach(function(el){
     el.style.display = (el.dataset.for === key) ? 'inline' : 'none';
@@ -3026,18 +3040,7 @@ function switchProgram(id) {
   updateArchTokenUsage();
 
   // Update persona chip
-  var uid = programState.userPersonaId;
-  var pp  = uid ? programState.participants[uid] : null;
-  if (pp) {
-    document.getElementById('chip-avatar').style.background = pp.bg;
-    document.getElementById('chip-initials').textContent    = pp.initials;
-    document.getElementById('chip-initials').style.color    = pp.color;
-    var cp = document.getElementById('chip-photo');
-    if (pp.photo) { cp.src = pp.photo; cp.style.display = ''; }
-    else          { cp.style.display = 'none'; }
-    document.getElementById('chip-name').textContent    = pp.displayName;
-    document.getElementById('msg-input').placeholder    = 'Type a message as ' + pp.displayName + '...';
-  }
+  updatePersonaChip();
 
   // Rebuild chat messages
   renderTranscript();
@@ -4001,17 +4004,6 @@ renderArchEnvironments();
 renderArchScenarios();
 updateArchTokenUsage();
 (function() {
-  var uid = programState.userPersonaId;
-  var pp  = uid ? programState.participants[uid] : null;
-  if (pp) {
-    document.getElementById('chip-avatar').style.background = pp.bg;
-    document.getElementById('chip-initials').textContent    = pp.initials;
-    document.getElementById('chip-initials').style.color    = pp.color;
-    var cp = document.getElementById('chip-photo');
-    if (pp.photo) { cp.src = pp.photo; cp.style.display = ''; }
-    else          { cp.style.display = 'none'; }
-    document.getElementById('chip-name').textContent    = pp.displayName;
-    document.getElementById('msg-input').placeholder    = 'Type a message as ' + pp.displayName + '...';
-  }
+  updatePersonaChip();
   renderTranscript();
 })();
