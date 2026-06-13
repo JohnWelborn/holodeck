@@ -60,8 +60,9 @@ UI for organizing reusable, program-independent characters into folders, backed 
 - New subfolder
 - Drag & drop reorder — before/after/into drop targets with circular-nesting prevention
 - Import character card — accepts PNG files with embedded V2 (or V1) chara metadata (same parser as the participant import); creates a new character entry named after the card, with personality, speech, photo, and traits populated directly in `characterLibrary`
-- Click a character — replaces the center panel (chat transcript + message input) with an edit form for that character, using the same fields as the participant edit form (display name, full name, role, avatar color, photo, personality, private personality, speech patterns, knowledge), minus perspectives. The clicked character is highlighted in the tree. Save writes changes back to `characterLibrary` and updates the tree label. Selecting a program in PROGRAMS restores the normal chat view.
-- Add to current program (square-plus icon) — deep-copies the character into the active program's participants with a fresh id, presence enabled and empty perspectives. The copy is fully independent: editing it in the Arch does not affect `characterLibrary`, and later edits to the library character do not retroactively change copies already added to programs.
+- Click a character — replaces the center panel (chat transcript + message input) with an edit form for that character, using the same fields as the participant edit form (display name, full name, role, avatar color, photo, personality, private personality, speech patterns, knowledge), plus a "Perspectives on Other Characters" section. The clicked character is highlighted in the tree. Save writes changes back to `characterLibrary` and updates the tree label. Selecting a program in PROGRAMS restores the normal chat view.
+- Perspectives on Other Characters — pick any other library character from a "+ Add perspective on…" dropdown and write how this character views them, from their own point of view. Stored on the library character keyed by the other character's library id. Each entry can be removed with its × button.
+- Add to current program (square-plus icon) — deep-copies the character into the active program's participants with a fresh id, presence enabled, and empty program-specific perspectives. The character's library-level "Perspectives on Other Characters" are copied along as default perspectives, tagged with the source library id. The copy is fully independent: editing it in the Arch does not affect `characterLibrary`, and later edits to the library character do not retroactively change copies already added to programs.
 
 ---
 
@@ -75,7 +76,9 @@ Environments & Scenarios — shared library/form pattern:
 
 Participants:
 - Create/edit form — name, role, personality, speech, knowledge, private personality (optional), perspectives on other participants
+- Perspective textareas show the character's library-level default perspective (if any, based on the other participant's source library character) as placeholder text when no per-program override has been written; a written override takes precedence
 - Private fields (knowledge, private personality, perspectives) are only included in that participant's own LLM prompts — not visible to other participants' AI
+- A character's perspective on another participant is only sent to the LLM if that other character is actually present in the program (resolved at prompt-build time, not at copy time)
 - Avatar color palette — preset swatches
 - Optional photo URL — falls back to initials if image fails
 - Import character card — "+ Import character card" button and drag-and-drop zone in the library tab; accepts PNG files with embedded V2 (or V1) chara metadata; pre-fills the participant form with name, personality (description + personality fields concatenated), speech (from mes_example), photo (PNG converted to data: URL), and traits (from tags); role must be filled in manually before saving; fields with no Holodeck equivalent (scenario, system_prompt, post_history_instructions, first_mes, alternate_greetings, character_book, creator, creator_notes, character_version) are silently skipped

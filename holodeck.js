@@ -718,9 +718,11 @@ function renderParticipantForm(container) {
     perspHtml = '<div class="form-group"><label class="form-label">Perspectives on Other Participants</label><p class="form-hint">How does this character view each other participant? Written from their own point of view — what they think, trust, remember.</p>';
     otherIds.forEach(function(oid) {
       var op = programState.participants[oid];
+      var defaultPersp = (prefill && prefill.defaultPerspectives && op.libraryId) ? prefill.defaultPerspectives[op.libraryId] : '';
+      var placeholder = defaultPersp || ('What this character thinks of ' + op.displayName + ', their history, how much they trust them…');
       perspHtml += '<div class="perspective-item">';
       perspHtml += '<div class="perspective-name"><div class="av" style="display:inline-flex;width:16px;height:16px;background:' + op.bg + ';"><span style="font-size:8px;font-weight:500;color:' + op.color + ';">' + escHtml(op.initials) + '</span></div>&nbsp;' + escHtml(op.displayName) + '</div>';
-      perspHtml += '<textarea class="form-input form-textarea" data-perspective-for="' + escHtml(oid) + '" style="min-height:60px;" placeholder="What this character thinks of ' + escHtml(op.displayName) + ', their history, how much they trust them…"></textarea>';
+      perspHtml += '<textarea class="form-input form-textarea" data-perspective-for="' + escHtml(oid) + '" style="min-height:60px;" placeholder="' + escHtml(placeholder) + '"></textarea>';
       perspHtml += '</div>';
     });
     perspHtml += '</div>';
@@ -755,7 +757,7 @@ function renderCharacterEditForm(container, charId) {
   var prefill = characterLibrary[charId];
   var palHtml = buildAvatarPaletteHtml(prefill, Object.values(characterLibrary).filter(function(c){ return c.id !== charId; }));
 
-  container.innerHTML = buildCharacterFieldsHtml(palHtml);
+  container.innerHTML = buildCharacterFieldsHtml(palHtml) + '<div id="char-perspectives-section"></div>';
 
   if (prefill) {
     container.querySelector('#f-display-name').value = prefill.displayName || '';
@@ -766,7 +768,83 @@ function renderCharacterEditForm(container, charId) {
     container.querySelector('#f-speech').value       = prefill.speech      || '';
     container.querySelector('#f-knowledge').value          = prefill.knowledge          || '';
     container.querySelector('#f-private-personality').value = prefill.privatePersonality || '';
+
+    renderCharacterPerspectivesSection(container.querySelector('#char-perspectives-section'), charId);
   }
+}
+
+// Perspectives this character holds on other library characters. Stored on
+// the library character keyed by the OTHER character's library id (distinct
+// from the per-program perspectives, which are keyed by participant id).
+function renderCharacterPerspectivesSection(container, charId) {
+  if (!container) return;
+  var c = characterLibrary[charId];
+  if (!c) { container.innerHTML = ''; return; }
+  var perspectives = c.perspectives || {};
+  var addedIds = Object.keys(perspectives).filter(function(oid){ return characterLibrary[oid]; });
+  var availableIds = Object.keys(characterLibrary).filter(function(oid){
+    return oid !== charId && !perspectives.hasOwnProperty(oid);
+  });
+
+  var html = '<div class="form-group"><label class="form-label">Perspectives on Other Characters</label>';
+  html += '<p class="form-hint">How does this character view other characters in the library? Written from their own point of view — only sent to the model if that character is also in the program.</p>';
+
+  addedIds.forEach(function(oid) {
+    var op = characterLibrary[oid];
+    html += '<div class="perspective-item">';
+    html += '<div class="perspective-name">';
+    html += '<div class="av" style="display:inline-flex;width:16px;height:16px;background:' + op.bg + ';"><span style="font-size:8px;font-weight:500;color:' + op.color + ';">' + escHtml(op.initials) + '</span></div>';
+    html += '<span>' + escHtml(op.displayName) + '</span>';
+    html += '<button type="button" title="Remove" onclick="removeCharacterPerspective(\'' + escHtml(charId) + '\',\'' + escHtml(oid) + '\')" style="color:var(--color-text-tertiary);display:flex;align-items:center;padding:0;margin-left:auto;background:none;border:none;cursor:pointer;"><i class="ti ti-x" style="font-size:11px;"></i></button>';
+    html += '</div>';
+    html += '<textarea class="form-input form-textarea" data-perspective-for="' + escHtml(oid) + '" style="min-height:60px;" placeholder="What this character thinks of ' + escHtml(op.displayName) + ', their history, how much they trust them…">' + escHtml(perspectives[oid] || '') + '</textarea>';
+    html += '</div>';
+  });
+
+  if (availableIds.length > 0) {
+    html += '<div class="form-group" style="margin-top:6px;">';
+    html += '<select class="form-input" id="f-add-perspective" onchange="addCharacterPerspective(\'' + escHtml(charId) + '\', this.value); this.value=\'\';">';
+    html += '<option value="">+ Add perspective on…</option>';
+    availableIds.forEach(function(oid) {
+      html += '<option value="' + escHtml(oid) + '">' + escHtml(characterLibrary[oid].displayName) + '</option>';
+    });
+    html += '</select></div>';
+  }
+
+  html += '</div>';
+  container.innerHTML = html;
+}
+
+// Captures any in-progress textarea edits back into characterLibrary[charId].perspectives
+// before the section is re-rendered (so adding/removing one entry doesn't lose others).
+function captureCharacterPerspectiveEdits(charId) {
+  var c = characterLibrary[charId];
+  if (!c || !c.perspectives) return;
+  var section = document.getElementById('char-perspectives-section');
+  if (!section) return;
+  section.querySelectorAll('[data-perspective-for]').forEach(function(ta) {
+    if (c.perspectives.hasOwnProperty(ta.dataset.perspectiveFor)) {
+      c.perspectives[ta.dataset.perspectiveFor] = ta.value;
+    }
+  });
+}
+
+function addCharacterPerspective(charId, otherId) {
+  if (!otherId) return;
+  var c = characterLibrary[charId];
+  if (!c) return;
+  if (!c.perspectives) c.perspectives = {};
+  captureCharacterPerspectiveEdits(charId);
+  if (!c.perspectives.hasOwnProperty(otherId)) c.perspectives[otherId] = '';
+  renderCharacterPerspectivesSection(document.getElementById('char-perspectives-section'), charId);
+}
+
+function removeCharacterPerspective(charId, otherId) {
+  var c = characterLibrary[charId];
+  if (!c || !c.perspectives) return;
+  captureCharacterPerspectiveEdits(charId);
+  delete c.perspectives[otherId];
+  renderCharacterPerspectivesSection(document.getElementById('char-perspectives-section'), charId);
 }
 
 function openCharacterEditor(charId) {
@@ -809,6 +887,13 @@ function saveCharacterEdit() {
     c.photo = photo; c.personality = personality; c.speech = speech;
     c.knowledge = knowledge; c.privatePersonality = privatePersonality;
     c.bg = pal.bg; c.color = pal.color; c.initials = generateInitials(displayName);
+
+    if (c.perspectives) {
+      form.querySelectorAll('[data-perspective-for]').forEach(function(ta) {
+        var key = ta.dataset.perspectiveFor;
+        if (c.perspectives.hasOwnProperty(key)) c.perspectives[key] = ta.value.trim();
+      });
+    }
   }
 
   var item = findItem(activeCharacterId, characterTreeData);
@@ -829,6 +914,8 @@ function addCharacterToProgram(charId) {
 
   var copy = JSON.parse(JSON.stringify(c));
   copy.id = newId;
+  copy.libraryId = charId;
+  copy.defaultPerspectives = copy.perspectives || {};
   copy.perspectives = {};
   programState.participants[newId] = copy;
   presence[newId] = true;
@@ -1423,6 +1510,9 @@ function buildPrompt(targetId, transcriptOverride) {
     .map(function(id){
       var p = programState.participants[id];
       var perspective = (target.perspectives && target.perspectives[id]) || '';
+      if (!perspective && target.defaultPerspectives && p.libraryId) {
+        perspective = target.defaultPerspectives[p.libraryId] || '';
+      }
       return '**' + p.fullName + '** (' + p.role + ') — ' + perspective;
     });
 
@@ -2388,6 +2478,9 @@ function buildUserSuggestionPrompt(targetId, count, draftText) {
     .map(function(id){
       var p = programState.participants[id];
       var perspective = (target.perspectives && target.perspectives[id]) || '';
+      if (!perspective && target.defaultPerspectives && p.libraryId) {
+        perspective = target.defaultPerspectives[p.libraryId] || '';
+      }
       return '**' + p.fullName + '** (' + p.role + ') — ' + perspective;
     });
 
