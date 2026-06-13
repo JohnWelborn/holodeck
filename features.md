@@ -48,18 +48,20 @@ The left panel is split into two independently collapsible sections: Programs an
 
 ### Characters Section
 
-Mock-up only — UI for organizing reusable characters into folders, not yet wired to actual character/participant data.
+UI for organizing reusable, program-independent characters into folders, backed by `characterLibrary`. Ships with 16 ready-made characters harvested from the default programs (Dr. Vasquez, Cmdr. Reyes, Kira, Lt. Torres, Prof. Aldric, Captain Osei, Ambassador Sael, Maren, Povik, Karathos, Syrath, Priya, Rahul, John, Stew, Cleverly), each with full personality/speech/knowledge/traits data.
 
-- New Character — creates a placeholder character entry and enters inline rename mode
+- New Character — creates a character entry (default fields, next unused avatar color) and enters inline rename mode
 - New Folder — creates a folder and enters inline rename mode
 - Folder expand/collapse
-- Inline rename — double-click; confirmed on Enter or blur, cancelled on Escape
+- Inline rename — double-click; confirmed on Enter or blur, cancelled on Escape; syncs the character's display name and initials, and live-updates the editor if that character is currently open
 - Delete folder — confirm dialog; only available on empty folders
-- Delete character — confirm dialog
+- Delete character — confirm dialog; removes the entry from `characterLibrary` and closes the editor if it was the active character
 - New character inside folder
 - New subfolder
 - Drag & drop reorder — before/after/into drop targets with circular-nesting prevention
-- Import character card — accepts PNG files with embedded V2 (or V1) chara metadata (same parser as the participant import); creates a new character entry named after the card, with personality, speech, photo, and traits stashed on the entry for future use
+- Import character card — accepts PNG files with embedded V2 (or V1) chara metadata (same parser as the participant import); creates a new character entry named after the card, with personality, speech, photo, and traits populated directly in `characterLibrary`
+- Click a character — replaces the center panel (chat transcript + message input) with an edit form for that character, using the same fields as the participant edit form (display name, full name, role, avatar color, photo, personality, private personality, speech patterns, knowledge), minus perspectives. The clicked character is highlighted in the tree. Save writes changes back to `characterLibrary` and updates the tree label. Selecting a program in PROGRAMS restores the normal chat view.
+- Add to current program (square-plus icon) — deep-copies the character into the active program's participants with a fresh id, presence enabled and empty perspectives. The copy is fully independent: editing it in the Arch does not affect `characterLibrary`, and later edits to the library character do not retroactively change copies already added to programs.
 
 ---
 

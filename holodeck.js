@@ -634,44 +634,31 @@ function renderScenForm(container) {
   }
 }
 
-function renderParticipantForm(container) {
-  var prefill   = editingItemId ? programState.participants[editingItemId] : null;
-  var otherIds  = Object.keys(programState.participants).filter(function(id){ return id !== editingItemId; });
-
-  // Determine selected palette index from prefill
+// Builds the avatar-color palette HTML and sets `selectedPaletteIndex` based
+// on `prefill` (existing entry) or the first color unused among `usedEntries`.
+function buildAvatarPaletteHtml(prefill, usedEntries) {
   if (prefill) {
     var palIdx = avatarPalette.findIndex(function(p){ return p.bg === prefill.bg; });
     selectedPaletteIndex = palIdx >= 0 ? palIdx : 0;
   } else {
-    // Pick an unused palette slot
-    var usedBgs = Object.values(programState.participants).map(function(p){ return p.bg; });
+    var usedBgs = usedEntries.map(function(p){ return p.bg; });
     selectedPaletteIndex = avatarPalette.findIndex(function(p){ return usedBgs.indexOf(p.bg) === -1; });
     if (selectedPaletteIndex < 0) selectedPaletteIndex = 0;
   }
 
-  // Build palette HTML
   var palHtml = '<div class="palette-grid">';
   avatarPalette.forEach(function(pal, idx) {
     var sel = idx === selectedPaletteIndex;
     palHtml += '<div class="color-swatch' + (sel?' selected':'') + '" style="background:' + pal.color + ';border-color:' + (sel?'var(--active-color)':'transparent') + ';" data-palette-idx="' + idx + '" onclick="selectPalette(' + idx + ')"></div>';
   });
   palHtml += '</div>';
+  return palHtml;
+}
 
-  // Build perspectives HTML
-  var perspHtml = '';
-  if (otherIds.length > 0) {
-    perspHtml = '<div class="form-group"><label class="form-label">Perspectives on Other Participants</label><p class="form-hint">How does this character view each other participant? Written from their own point of view — what they think, trust, remember.</p>';
-    otherIds.forEach(function(oid) {
-      var op = programState.participants[oid];
-      perspHtml += '<div class="perspective-item">';
-      perspHtml += '<div class="perspective-name"><div class="av" style="display:inline-flex;width:16px;height:16px;background:' + op.bg + ';"><span style="font-size:8px;font-weight:500;color:' + op.color + ';">' + escHtml(op.initials) + '</span></div>&nbsp;' + escHtml(op.displayName) + '</div>';
-      perspHtml += '<textarea class="form-input form-textarea" data-perspective-for="' + escHtml(oid) + '" style="min-height:60px;" placeholder="What this character thinks of ' + escHtml(op.displayName) + ', their history, how much they trust them…"></textarea>';
-      perspHtml += '</div>';
-    });
-    perspHtml += '</div>';
-  }
-
-  container.innerHTML = [
+// Shared field set for editing a character/participant: name, role, avatar
+// color, photo, personality, private personality, speech, knowledge.
+function buildCharacterFieldsHtml(palHtml) {
+  return [
     '<div class="form-grid-2">',
     '  <div class="form-group">',
     '    <label class="form-label">Display Name <span style="color:#d97070;">*</span></label>',
@@ -715,9 +702,31 @@ function renderParticipantForm(container) {
     '  <label class="form-label">What They Know About This Scene</label>',
     '  <p class="form-hint">Their knowledge state at this moment — what they\'ve seen, heard, or calculated. Distinct from general backstory.</p>',
     '  <textarea class="form-input form-textarea" id="f-knowledge" style="min-height:90px;" placeholder="She detected the microfracture thirty seconds before the general alarm. She has already calculated…"></textarea>',
-    '</div>',
-    perspHtml
+    '</div>'
   ].join('');
+}
+
+function renderParticipantForm(container) {
+  var prefill   = editingItemId ? programState.participants[editingItemId] : null;
+  var otherIds  = Object.keys(programState.participants).filter(function(id){ return id !== editingItemId; });
+
+  var palHtml = buildAvatarPaletteHtml(prefill, Object.values(programState.participants));
+
+  // Build perspectives HTML
+  var perspHtml = '';
+  if (otherIds.length > 0) {
+    perspHtml = '<div class="form-group"><label class="form-label">Perspectives on Other Participants</label><p class="form-hint">How does this character view each other participant? Written from their own point of view — what they think, trust, remember.</p>';
+    otherIds.forEach(function(oid) {
+      var op = programState.participants[oid];
+      perspHtml += '<div class="perspective-item">';
+      perspHtml += '<div class="perspective-name"><div class="av" style="display:inline-flex;width:16px;height:16px;background:' + op.bg + ';"><span style="font-size:8px;font-weight:500;color:' + op.color + ';">' + escHtml(op.initials) + '</span></div>&nbsp;' + escHtml(op.displayName) + '</div>';
+      perspHtml += '<textarea class="form-input form-textarea" data-perspective-for="' + escHtml(oid) + '" style="min-height:60px;" placeholder="What this character thinks of ' + escHtml(op.displayName) + ', their history, how much they trust them…"></textarea>';
+      perspHtml += '</div>';
+    });
+    perspHtml += '</div>';
+  }
+
+  container.innerHTML = buildCharacterFieldsHtml(palHtml) + perspHtml;
 
   // Pre-fill if editing
   if (prefill) {
@@ -740,6 +749,92 @@ function renderParticipantForm(container) {
     document.getElementById('f-personality').value  = importPrefill.personality || '';
     document.getElementById('f-speech').value       = importPrefill.speech      || '';
   }
+}
+
+function renderCharacterEditForm(container, charId) {
+  var prefill = characterLibrary[charId];
+  var palHtml = buildAvatarPaletteHtml(prefill, Object.values(characterLibrary).filter(function(c){ return c.id !== charId; }));
+
+  container.innerHTML = buildCharacterFieldsHtml(palHtml);
+
+  if (prefill) {
+    container.querySelector('#f-display-name').value = prefill.displayName || '';
+    container.querySelector('#f-full-name').value    = prefill.fullName    || '';
+    container.querySelector('#f-role').value         = prefill.role        || '';
+    container.querySelector('#f-photo').value        = prefill.photo       || '';
+    container.querySelector('#f-personality').value  = prefill.personality || '';
+    container.querySelector('#f-speech').value       = prefill.speech      || '';
+    container.querySelector('#f-knowledge').value          = prefill.knowledge          || '';
+    container.querySelector('#f-private-personality').value = prefill.privatePersonality || '';
+  }
+}
+
+function openCharacterEditor(charId) {
+  activeCharacterId = charId;
+  var prefill = characterLibrary[charId];
+  document.getElementById('scene-view').style.display = 'none';
+  document.getElementById('character-editor-view').style.display = 'flex';
+  document.getElementById('character-editor-title').textContent = prefill ? prefill.displayName : '';
+  renderCharacterEditForm(document.getElementById('character-editor-form'), charId);
+  renderCharacterTree();
+}
+
+function closeCharacterEditor() {
+  if (!activeCharacterId) return;
+  activeCharacterId = null;
+  document.getElementById('character-editor-view').style.display = 'none';
+  document.getElementById('scene-view').style.display = 'flex';
+  renderCharacterTree();
+}
+
+function saveCharacterEdit() {
+  var form = document.getElementById('character-editor-form');
+  var displayName = (form.querySelector('#f-display-name').value || '').trim();
+  var fullName    = (form.querySelector('#f-full-name').value    || '').trim() || displayName;
+  var role        = (form.querySelector('#f-role').value         || '').trim();
+  var photo       = (form.querySelector('#f-photo').value        || '').trim() || null;
+  var personality = (form.querySelector('#f-personality').value  || '').trim();
+  var speech      = (form.querySelector('#f-speech').value       || '').trim();
+  var knowledge          = (form.querySelector('#f-knowledge').value           || '').trim();
+  var privatePersonality = (form.querySelector('#f-private-personality').value || '').trim();
+
+  if (!displayName) { highlightRequiredIn(form, 'f-display-name'); return; }
+  if (!role)        { highlightRequiredIn(form, 'f-role'); return; }
+
+  var pal = avatarPalette[selectedPaletteIndex];
+
+  var c = characterLibrary[activeCharacterId];
+  if (c) {
+    c.displayName = displayName; c.fullName = fullName; c.role = role;
+    c.photo = photo; c.personality = personality; c.speech = speech;
+    c.knowledge = knowledge; c.privatePersonality = privatePersonality;
+    c.bg = pal.bg; c.color = pal.color; c.initials = generateInitials(displayName);
+  }
+
+  var item = findItem(activeCharacterId, characterTreeData);
+  if (item) item.name = displayName;
+
+  document.getElementById('character-editor-title').textContent = displayName;
+  renderCharacterTree();
+  scheduleSave();
+}
+
+function addCharacterToProgram(charId) {
+  var c = characterLibrary[charId];
+  if (!c) return;
+
+  var newId = c.initials;
+  var counter = 1;
+  while (programState.participants[newId]) { newId = c.initials + counter; counter++; }
+
+  var copy = JSON.parse(JSON.stringify(c));
+  copy.id = newId;
+  copy.perspectives = {};
+  programState.participants[newId] = copy;
+  presence[newId] = true;
+
+  renderParticipants();
+  scheduleSave();
 }
 
 function selectPalette(idx) {
@@ -1091,6 +1186,14 @@ function removeTrait(participantId, traitIndex) {
 
 function highlightRequired(fieldId) {
   var el = document.getElementById(fieldId);
+  if (!el) return;
+  el.style.borderColor = '#d97070';
+  el.focus();
+  setTimeout(function(){ el.style.borderColor = ''; }, 1800);
+}
+
+function highlightRequiredIn(container, fieldId) {
+  var el = container.querySelector('#' + fieldId);
   if (!el) return;
   el.style.borderColor = '#d97070';
   el.focus();
@@ -2870,9 +2973,11 @@ msgInput.addEventListener('input', function(){
 var activeProgramId = 'p7';
 var draggedId = null;
 var draggedCharId = null;
+var activeCharacterId = null;
 
 // ─── Switch program ────────────────────────────────────────────────
 function switchProgram(id) {
+  closeCharacterEditor();
   syncProgramStateToStore();
   var data = programsStore[id];
   if (!data) {
@@ -3498,14 +3603,15 @@ function renderLevel(items,container,depth){
 }
 
 // ═══════════════════════════════════════════════════════════════════
-//  CHARACTERS TREE (mock — not yet wired to character data)
+//  CHARACTERS TREE
 // ═══════════════════════════════════════════════════════════════════
 function renderCharacterTree(){var c=document.getElementById('character-tree-container');c.innerHTML='';renderCharacterLevel(characterTreeData,c,0);}
 function renderCharacterLevel(items,container,depth){
   items.forEach(function(item){
     var pad=10+depth*14, el=mk('div','tree-item');
     el.dataset.id=item.id; el.dataset.type=item.type; el.draggable=true;
-    el.style.cssText='padding:5px 10px 5px '+pad+'px;cursor:default;color:var(--color-text-secondary);';
+    var isActive = item.type==='character' && item.id===activeCharacterId;
+    el.style.cssText='padding:5px 10px 5px '+pad+'px;cursor:'+(item.type==='character'?'pointer':'default')+';'+(isActive?'background:var(--active-bg);border-left:2px solid var(--active-border);color:var(--active-color);':'color:var(--color-text-secondary);');
     var tl=mk('div','drop-line top'), bl=mk('div','drop-line bottom'); el.appendChild(tl); el.appendChild(bl);
 
     if(item.type==='character-folder'){
@@ -3533,14 +3639,27 @@ function renderCharacterLevel(items,container,depth){
       var sp=mk('span'); sp.style.cssText='width:11px;flex-shrink:0;'; el.appendChild(sp);
       var mi=mk('i','ti ti-user'); mi.style.cssText='font-size:12px;flex-shrink:0;'; el.appendChild(mi);
       var nm=mk('span','tree-label'); nm.textContent=item.name; nm.style.cssText='flex:1;overflow:hidden;text-overflow:ellipsis;'; el.appendChild(nm);
+      var ad=mk('i','ti ti-square-rounded-plus'); ad.style.cssText='font-size:12px;cursor:pointer;flex-shrink:0;opacity:0.5;margin-left:2px;';
+      ad.title='Add to current program';
+      ad.addEventListener('click',function(e){
+        e.stopPropagation();
+        addCharacterToProgram(item.id);
+      });
+      el.appendChild(ad);
       var dp=mk('i','ti ti-trash tree-prog-del'); dp.style.cssText='font-size:12px;cursor:pointer;flex-shrink:0;opacity:0.5;margin-left:2px;';
       dp.title='Delete character';
       dp.addEventListener('click',function(e){
         e.stopPropagation();
-        showConfirm('Delete character', 'Delete "' + item.name + '"?', function(){ removeItem(item.id, characterTreeData); renderCharacterTree(); scheduleSave(); });
+        showConfirm('Delete character', 'Delete "' + item.name + '"?', function(){
+          removeItem(item.id, characterTreeData);
+          delete characterLibrary[item.id];
+          if (activeCharacterId === item.id) closeCharacterEditor();
+          renderCharacterTree(); scheduleSave();
+        });
       });
       el.appendChild(dp);
       nm.addEventListener('dblclick',function(e){e.stopPropagation();startRenameCharacter(item.id);});
+      el.addEventListener('click',function(e){ if(draggedCharId) return; openCharacterEditor(item.id); });
     }
     el.addEventListener('dragstart',function(e){draggedCharId=this.dataset.id;e.dataTransfer.effectAllowed='move';e.dataTransfer.setData('text/plain',draggedCharId);var s=this;setTimeout(function(){s.style.opacity='0.35';},0);});
     el.addEventListener('dragover',function(e){e.preventDefault();e.stopPropagation();if(this.dataset.id===draggedCharId||isAncestor(draggedCharId,this.dataset.id,characterTreeData))return;clearIndicators();var rect=this.getBoundingClientRect(),y=e.clientY-rect.top,h=rect.height,isF=this.dataset.type==='character-folder';if(isF&&y>h*0.28&&y<h*0.72){this.style.outline='1.5px solid #1D9E75';this.style.borderRadius='3px';this._dp='into';}else if(y<=h*0.5){this.querySelector('.drop-line.top').style.display='block';this._dp='before';}else{this.querySelector('.drop-line.bottom').style.display='block';this._dp='after';}});
@@ -3575,6 +3694,14 @@ function createCharacterItem(parentFolderId) {
   } else {
     characterTreeData.push(newItem);
   }
+  var usedBgs = Object.values(characterLibrary).map(function(c){ return c.bg; });
+  var palIdx = avatarPalette.findIndex(function(p){ return usedBgs.indexOf(p.bg) === -1; });
+  if (palIdx < 0) palIdx = 0;
+  characterLibrary[newId] = {
+    id: newId, displayName: 'New Character', fullName: '', initials: generateInitials('New Character'),
+    role: '', bg: avatarPalette[palIdx].bg, color: avatarPalette[palIdx].color, photo: null,
+    personality: '', speech: '', knowledge: '', privatePersonality: ''
+  };
   renderCharacterTree();
   scheduleSave();
   startRenameCharacter(newId);
@@ -3599,21 +3726,23 @@ function importCharacterCardToTree(file, parentFolderId) {
     var personality = [cardData.description, cardData.personality].filter(Boolean).join('\n\n');
     var tags = (cardData.tags || []).filter(Boolean);
     var newId   = 'c-' + Date.now();
-    var newItem = {
-      id: newId, type:'character', name: cardData.name || 'New Character',
-      cardData: {
-        personality: personality,
-        speech:      cardData.mes_example || '',
-        photo:       dataUrl,
-        traits:      tags.map(function(tag) { return { id: 'tag-' + tag, name: tag, description: '' }; })
-      }
-    };
+    var name = cardData.name || 'New Character';
+    var newItem = { id: newId, type:'character', name: name };
     if (parentFolderId) {
       var folder = findItem(parentFolderId, characterTreeData);
       if (folder) { folder.children = folder.children || []; folder.children.push(newItem); folder.open = true; }
     } else {
       characterTreeData.push(newItem);
     }
+    var usedBgs = Object.values(characterLibrary).map(function(c){ return c.bg; });
+    var palIdx = avatarPalette.findIndex(function(p){ return usedBgs.indexOf(p.bg) === -1; });
+    if (palIdx < 0) palIdx = 0;
+    characterLibrary[newId] = {
+      id: newId, displayName: name, fullName: '', initials: generateInitials(name),
+      role: '', bg: avatarPalette[palIdx].bg, color: avatarPalette[palIdx].color, photo: dataUrl,
+      personality: personality, speech: cardData.mes_example || '', knowledge: '', privatePersonality: '',
+      traits: tags.map(function(tag) { return { id: 'tag-' + tag, name: tag, description: '' }; })
+    };
     renderCharacterTree();
     scheduleSave();
   }).catch(function() {
@@ -3635,6 +3764,16 @@ function startRenameCharacter(id) {
   input.focus(); input.select();
   function commit() {
     item.name = input.value.trim() || item.name;
+    if (characterLibrary[id]) {
+      characterLibrary[id].displayName = item.name;
+      characterLibrary[id].initials = generateInitials(item.name);
+      if (activeCharacterId === id) {
+        var titleEl = document.getElementById('character-editor-title');
+        if (titleEl) titleEl.textContent = item.name;
+        var nameInput = document.getElementById('f-display-name');
+        if (nameInput) nameInput.value = item.name;
+      }
+    }
     renderCharacterTree();
     scheduleSave();
   }
@@ -3673,6 +3812,7 @@ function saveToStorage() {
       programsStore: programsStore,
       treeData: treeData,
       characterTreeData: characterTreeData,
+      characterLibrary: characterLibrary,
       apiEndpoints: apiEndpoints,
       activeEndpointId: activeEndpointId,
       activeProgramId: activeProgramId
@@ -3716,6 +3856,10 @@ function loadFromStorage() {
     if (saved.characterTreeData) {
       characterTreeData.splice(0, characterTreeData.length);
       saved.characterTreeData.forEach(function(i){ characterTreeData.push(i); });
+    }
+    if (saved.characterLibrary) {
+      Object.keys(characterLibrary).forEach(function(k){ delete characterLibrary[k]; });
+      Object.assign(characterLibrary, saved.characterLibrary);
     }
     if (saved.apiEndpoints && saved.apiEndpoints.length) {
       apiEndpoints = saved.apiEndpoints;
