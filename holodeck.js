@@ -1811,8 +1811,7 @@ async function triggerCharacter(targetId) {
   }
 }
 
-async function streamCompletion(targetId, prompt, bubble, container) {
-  var p = programState.participants[targetId];
+async function streamChatCompletion(prompt, bubble, container, opts) {
   var url = apiEndpoint();
   var headers = buildHeaders();
   var requestBody = {
@@ -1826,11 +1825,11 @@ async function streamCompletion(targetId, prompt, bubble, container) {
     top_p: 0.95,
     frequency_penalty: 0.1,
     presence_penalty: 0.1,
-    stream: true,
-    stream_options: { include_usage: true }
+    stream: true
   };
+  if (opts.trackUsage) requestBody.stream_options = { include_usage: true };
 
-  console.group('%c[Holodeck] API Request → ' + p.displayName, 'color:#56c99a;font-weight:bold;');
+  console.group('%c[Holodeck] API Request → ' + opts.label, 'color:#56c99a;font-weight:bold;');
   console.log('%cURL', 'color:#888', url);
   console.log('%cHeaders', 'color:#888', redactHeaders(headers));
   console.log('%cRequest body', 'color:#888', requestBody);
@@ -1869,7 +1868,7 @@ async function streamCompletion(targetId, prompt, bubble, container) {
           var choice = parsed.choices && parsed.choices[0];
           var delta  = choice && choice.delta && choice.delta.content;
           if (choice && choice.finish_reason) finishReason = choice.finish_reason;
-          if (parsed.usage) lastUsage = parsed.usage;
+          if (opts.trackUsage && parsed.usage) lastUsage = parsed.usage;
           if (delta) {
             if (!started) { bubble.textContent = ''; started = true; }
             fullText += delta;
@@ -1895,11 +1894,16 @@ async function streamCompletion(targetId, prompt, bubble, container) {
       warn.textContent = '⚠ Reply was cut off (max_tokens reached).';
       bubble.appendChild(warn);
     }
-    updateArchTokenUsage();
+    if (opts.trackUsage) updateArchTokenUsage();
     return fullText.trim();
   } finally {
     console.groupEnd();
   }
+}
+
+async function streamCompletion(targetId, prompt, bubble, container) {
+  var p = programState.participants[targetId];
+  return streamChatCompletion(prompt, bubble, container, { label: p.displayName, trackUsage: true });
 }
 
 function wireUpRegenButtons(msgResult, transcriptIdx) {
@@ -2698,90 +2702,7 @@ function buildDescribePrompt(instruction, transcriptOverride) {
 }
 
 async function streamNarratorCompletion(prompt, bubble, container) {
-  var url = apiEndpoint();
-  var headers = buildHeaders();
-  var requestBody = {
-    model: apiSettings.model,
-    messages: [
-      { role:'system', content:prompt.systemPrompt },
-      { role:'user',   content:prompt.userMessage  }
-    ],
-    temperature: 0.85,
-    max_tokens: apiSettings.maxTokens,
-    top_p: 0.95,
-    frequency_penalty: 0.1,
-    presence_penalty: 0.1,
-    stream: true
-  };
-
-  console.group('%c[Holodeck] API Request → Narrator', 'color:#56c99a;font-weight:bold;');
-  console.log('%cURL', 'color:#888', url);
-  console.log('%cHeaders', 'color:#888', redactHeaders(headers));
-  console.log('%cRequest body', 'color:#888', requestBody);
-  console.log('%cSystem Prompt', 'color:#888', prompt.systemPrompt);
-  console.log('%cUser Message', 'color:#888', prompt.userMessage);
-
-  try {
-    var response = await fetch(url, {
-      method:'POST', headers: headers,
-      body: JSON.stringify(requestBody)
-    });
-    if (!response.ok) {
-      var errBody = await response.text().catch(function(){ return ''; });
-      console.log('%cResponse (error)', 'color:#d97070', errBody);
-      throw new Error('HTTP ' + response.status + (errBody ? ': ' + errBody.slice(0,160) : ''));
-    }
-
-    var reader  = response.body.getReader();
-    var decoder = new TextDecoder();
-    var fullText = ''; var started = false; var buffer = '';
-    var finishReason = null;
-
-    while (true) {
-      var chunk = await reader.read();
-      if (chunk.done) break;
-      buffer += decoder.decode(chunk.value, { stream:true });
-      var lines = buffer.split('\n');
-      buffer = lines.pop();
-      for (var i = 0; i < lines.length; i++) {
-        var line = lines[i].trim();
-        if (!line.startsWith('data: ')) continue;
-        var data = line.slice(6).trim();
-        if (data === '[DONE]') continue;
-        try {
-          var parsed = JSON.parse(data);
-          var choice = parsed.choices && parsed.choices[0];
-          var delta  = choice && choice.delta && choice.delta.content;
-          if (choice && choice.finish_reason) finishReason = choice.finish_reason;
-          if (delta) {
-            if (!started) { bubble.textContent = ''; started = true; }
-            fullText += delta;
-            bubble.textContent = fullText;
-            container.scrollTop = container.scrollHeight;
-          }
-        } catch(e) { /* skip malformed SSE lines */ }
-      }
-    }
-
-    console.log('%cResponse text', 'color:#888', fullText);
-    console.log('%cfinish_reason', 'color:#888', finishReason);
-
-    if (!started || !fullText.trim()) {
-      bubble.innerHTML = '<span style="color:var(--color-text-tertiary);font-style:italic;">No response generated.</span>';
-      return null;
-    }
-
-    bubble.innerHTML = renderDialogue(fullText.trim());
-    if (finishReason === 'length') {
-      var warn = document.createElement('div');
-      warn.style.cssText = 'margin-top:6px;font-size:11px;color:#d4956a;font-style:italic;';
-      warn.textContent = '⚠ Reply was cut off (max_tokens reached).';
-      bubble.appendChild(warn);
-    }
-    return fullText.trim();
-  } finally {
-    console.groupEnd();
-  }
+  return streamChatCompletion(prompt, bubble, container, { label: 'Narrator', trackUsage: false });
 }
 
 async function sendDescribePrompt() {
