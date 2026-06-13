@@ -1326,14 +1326,14 @@ function renderArchContentPolicy() {
   container.appendChild(item);
 }
 
-function renderArchEnvironments() {
-  var container = document.getElementById('arch-environments');
+function renderArchList(containerId, items, modalType, removeFn, emptyText) {
+  var container = document.getElementById(containerId);
   container.innerHTML = '';
-  if (programState.environments.length === 0) {
-    container.innerHTML = '<div style="font-size:11px;color:var(--color-text-tertiary);font-style:italic;padding:4px 2px;">No environments set.</div>';
+  if (items.length === 0) {
+    container.innerHTML = '<div style="font-size:11px;color:var(--color-text-tertiary);font-style:italic;padding:4px 2px;">' + emptyText + '</div>';
     return;
   }
-  programState.environments.forEach(function(env) {
+  items.forEach(function(entry) {
     var item = document.createElement('div');
     item.className = 'arch-item';
     item.style.cssText = 'display:flex;align-items:center;padding:5px 7px;border-radius:var(--border-radius-md);background:var(--color-background-primary);border:0.5px solid var(--color-border-tertiary);margin-bottom:3px;min-width:0;';
@@ -1341,7 +1341,7 @@ function renderArchEnvironments() {
     var name = document.createElement('span');
     name.className = 'arch-item-name';
     name.style.cssText = 'font-size:12px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;flex:1;';
-    name.textContent = env.name;
+    name.textContent = entry.name;
     item.appendChild(name);
 
     var actions = document.createElement('div');
@@ -1351,13 +1351,13 @@ function renderArchEnvironments() {
     var editBtn = document.createElement('button');
     editBtn.title = 'Edit'; editBtn.style.cssText = 'color:var(--color-text-secondary);display:flex;align-items:center;padding:1px;border-radius:4px;';
     editBtn.innerHTML = '<i class="ti ti-pencil" style="font-size:11px;"></i>';
-    editBtn.onclick = (function(id){ return function(){ openModal('env', id); }; })(env.id);
+    editBtn.onclick = (function(id){ return function(){ openModal(modalType, id); }; })(entry.id);
     actions.appendChild(editBtn);
 
     var removeBtn = document.createElement('button');
     removeBtn.title = 'Remove'; removeBtn.style.cssText = 'color:var(--color-text-secondary);display:flex;align-items:center;padding:1px;border-radius:4px;opacity:0.55;margin-left:2px;';
     removeBtn.innerHTML = '<i class="ti ti-x" style="font-size:11px;"></i>';
-    removeBtn.onclick = (function(id){ return function(){ removeEnvFromScene(id); }; })(env.id);
+    removeBtn.onclick = (function(id){ return function(){ removeFn(id); }; })(entry.id);
     actions.appendChild(removeBtn);
 
     item.appendChild(actions);
@@ -1365,43 +1365,12 @@ function renderArchEnvironments() {
   });
 }
 
+function renderArchEnvironments() {
+  renderArchList('arch-environments', programState.environments, 'env', removeEnvFromScene, 'No environments set.');
+}
+
 function renderArchScenarios() {
-  var container = document.getElementById('arch-scenarios');
-  container.innerHTML = '';
-  if (programState.scenarios.length === 0) {
-    container.innerHTML = '<div style="font-size:11px;color:var(--color-text-tertiary);font-style:italic;padding:4px 2px;">No scenarios set.</div>';
-    return;
-  }
-  programState.scenarios.forEach(function(scen) {
-    var item = document.createElement('div');
-    item.className = 'arch-item';
-    item.style.cssText = 'display:flex;align-items:center;padding:5px 7px;border-radius:var(--border-radius-md);background:var(--color-background-primary);border:0.5px solid var(--color-border-tertiary);margin-bottom:3px;min-width:0;';
-
-    var name = document.createElement('span');
-    name.className = 'arch-item-name';
-    name.style.cssText = 'font-size:12px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;flex:1;';
-    name.textContent = scen.name;
-    item.appendChild(name);
-
-    var actions = document.createElement('div');
-    actions.className = 'arch-item-actions';
-    actions.style.cssText = 'display:none;align-items:center;gap:2px;flex-shrink:0;';
-
-    var editBtn = document.createElement('button');
-    editBtn.title = 'Edit'; editBtn.style.cssText = 'color:var(--color-text-secondary);display:flex;align-items:center;padding:1px;border-radius:4px;';
-    editBtn.innerHTML = '<i class="ti ti-pencil" style="font-size:11px;"></i>';
-    editBtn.onclick = (function(id){ return function(){ openModal('scen', id); }; })(scen.id);
-    actions.appendChild(editBtn);
-
-    var removeBtn = document.createElement('button');
-    removeBtn.title = 'Remove'; removeBtn.style.cssText = 'color:var(--color-text-secondary);display:flex;align-items:center;padding:1px;border-radius:4px;opacity:0.55;margin-left:2px;';
-    removeBtn.innerHTML = '<i class="ti ti-x" style="font-size:11px;"></i>';
-    removeBtn.onclick = (function(id){ return function(){ removeScenFromScene(id); }; })(scen.id);
-    actions.appendChild(removeBtn);
-
-    item.appendChild(actions);
-    container.appendChild(item);
-  });
+  renderArchList('arch-scenarios', programState.scenarios, 'scen', removeScenFromScene, 'No scenarios set.');
 }
 
 function updateArchTokenUsage() {
