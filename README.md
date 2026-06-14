@@ -1,6 +1,6 @@
 # Holodeck
 
-A local browser-based interactive fiction engine for simulating multi-character scenes, where each AI character operates from its own filtered context and subjective view of the cast. Depends on running your own llama.cpp server.
+A local browser-based interactive fiction engine for simulating multi-character scenes, where each AI character operates from its own filtered context and subjective view of the cast. Works with any OpenAI-compatible API, including a local llama.cpp server.
 
 ![Holodeck screenshot](screenshot.png)
 
@@ -8,7 +8,7 @@ A local browser-based interactive fiction engine for simulating multi-character 
 
 Each character makes its own LLM call against a filtered transcript; characters only see what they should know, giving each one a genuinely subjective view of events.
 
-- **Local and offline**: runs entirely in your browser against your own llama.cpp server, no cloud required
+- **Local and offline capable**: runs entirely in your browser against your own llama.cpp server, or any OpenAI-compatible API you configure
 - **localStorage**: all data is stored in your browser's local storage — no server, no account
 - **Programs**: named scenes with participants, environments, and scenarios; AI generation from a premise
 - **Presence toggling**: characters enter and leave the scene; their context is filtered from future prompts
@@ -28,7 +28,7 @@ This repository was built as an exercise in AI-assisted coding.
 
 ### Model
 
-Designed for use with a Mistral Small 3.x 24B model using the Mistral v7 chat template via a local server (OpenAI-compatible API)
+Designed for use with a Mistral Small 3.x 24B model using the Mistral v7 chat template. Connect via any OpenAI-compatible API, local or remote
 
 - [unsloth/Mistral-Small-3.1-24B-Instruct-2503-GGUF](https://huggingface.co/unsloth/Mistral-Small-3.1-24B-Instruct-2503-GGUF)
 - [bartowski/TheDrummer_Cydonia-24B-v4.2.0-GGUF](https://huggingface.co/bartowski/TheDrummer_Cydonia-24B-v4.2.0-GGUF)
