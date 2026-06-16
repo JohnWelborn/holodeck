@@ -140,6 +140,10 @@
     .api-status { font-size: 11px; line-height: 1.45; margin-top: 10px; min-height: 16px; word-break: break-word; white-space: pre-wrap; }
     .settings-panel.open { display: block; }
     .setting-label { display: block; font-size: 10px; font-weight: 500; color: var(--color-text-secondary); letter-spacing: 0.5px; text-transform: uppercase; margin-bottom: 5px; }
+    .sync-radio-label { font-size: 11px; color: var(--color-text-secondary); display: flex; align-items: center; gap: 6px; cursor: pointer; }
+    .sync-radio-label input[type=radio] { accent-color: var(--active-color); cursor: pointer; }
+    #settings-btn.sync-notify { position: relative; }
+    #settings-btn.sync-notify::after { content: ''; position: absolute; top: 4px; right: 4px; width: 6px; height: 6px; border-radius: 50%; background: var(--active-color); }
     .setting-input {
       width: 100%; background: var(--color-background-tertiary);
       border: 0.5px solid var(--color-border-secondary);

@@ -3720,6 +3720,310 @@ function startRenameCharacter(id) {
 
 
 // ═══════════════════════════════════════════════════════════════════
+//  SYNC / CLOUD STORAGE
+// ═══════════════════════════════════════════════════════════════════
+var SYNC_KEY      = 'holodeck_sync';
+var _syncPassword = '';    // session-only, never persisted
+var _fileHandle   = null;  // session-only FileSystemFileHandle
+
+function _getSyncSettings() {
+  try { var r = localStorage.getItem(SYNC_KEY); if (r) return JSON.parse(r); } catch(e) {}
+  return { mode: 'local', gistPat: '', gistId: '' };
+}
+function _saveSyncSettings(s) {
+  try { localStorage.setItem(SYNC_KEY, JSON.stringify(s)); } catch(e) {}
+}
+
+// ─── Web Crypto helpers ──────────────────────────────────────────
+async function _deriveKey(password, salt) {
+  var mat = await crypto.subtle.importKey(
+    'raw', new TextEncoder().encode(password), 'PBKDF2', false, ['deriveKey']
+  );
+  return crypto.subtle.deriveKey(
+    { name: 'PBKDF2', salt: salt, iterations: 200000, hash: 'SHA-256' },
+    mat, { name: 'AES-GCM', length: 256 }, false, ['encrypt', 'decrypt']
+  );
+}
+function _b64(buf) { return btoa(String.fromCharCode.apply(null, new Uint8Array(buf))); }
+function _unb64(s) { return Uint8Array.from(atob(s), function(c) { return c.charCodeAt(0); }); }
+
+async function _encrypt(plaintext, password) {
+  var salt = crypto.getRandomValues(new Uint8Array(16));
+  var iv   = crypto.getRandomValues(new Uint8Array(12));
+  var key  = await _deriveKey(password, salt);
+  var ct   = await crypto.subtle.encrypt({ name: 'AES-GCM', iv: iv }, key, new TextEncoder().encode(plaintext));
+  return JSON.stringify({ enc: true, salt: _b64(salt), iv: _b64(iv), data: _b64(ct) });
+}
+async function _decrypt(raw, password) {
+  var obj = JSON.parse(raw);
+  if (!obj.enc) return raw;
+  var key = await _deriveKey(password, _unb64(obj.salt));
+  var pt  = await crypto.subtle.decrypt({ name: 'AES-GCM', iv: _unb64(obj.iv) }, key, _unb64(obj.data));
+  return new TextDecoder().decode(pt);
+}
+
+// ─── Cloud-safe payload (tokens stripped) ───────────────────────
+function _buildSyncPayload() {
+  return {
+    library: library,
+    programsStore: programsStore,
+    treeData: treeData,
+    characterTreeData: characterTreeData,
+    characterLibrary: characterLibrary,
+    apiEndpoints: apiEndpoints.map(function(ep) {
+      return { id: ep.id, name: ep.name, baseUrl: ep.baseUrl, model: ep.model, maxTokens: ep.maxTokens };
+    }),
+    activeEndpointId: activeEndpointId,
+    activeProgramId: activeProgramId,
+    savedAt: new Date().toISOString()
+  };
+}
+
+// ─── File sync ───────────────────────────────────────────────────
+async function _saveToFile() {
+  if (!_fileHandle) return;
+  try {
+    var perm = await _fileHandle.queryPermission({ mode: 'readwrite' });
+    if (perm !== 'granted') perm = await _fileHandle.requestPermission({ mode: 'readwrite' });
+    if (perm !== 'granted') { _showSyncStatus('File permission denied', true); return; }
+    syncProgramStateToStore();
+    var content = JSON.stringify(_buildSyncPayload());
+    if (_syncPassword) content = await _encrypt(content, _syncPassword);
+    var w = await _fileHandle.createWritable();
+    await w.write(content);
+    await w.close();
+    _showSyncStatus('Saved to file');
+  } catch(e) {
+    console.warn('[Holodeck] File save error:', e);
+    _showSyncStatus('File save failed', true);
+  }
+}
+
+async function connectSyncFile() {
+  if (!window.showOpenFilePicker) {
+    alert('File System Access API not supported in this browser.\nUse Chrome or Edge 86+.');
+    return;
+  }
+  try {
+    var handles = await window.showOpenFilePicker({
+      multiple: false,
+      types: [{ description: 'JSON', accept: { 'application/json': ['.json'] } }]
+    });
+    _fileHandle = handles[0];
+    var file = await _fileHandle.getFile();
+    var raw  = await file.text();
+    if (raw.trim()) {
+      try {
+        var content = raw;
+        var peek = null;
+        try { peek = JSON.parse(raw); } catch(e) {}
+        if (peek && peek.enc) {
+          if (!_syncPassword) { alert('This file is encrypted — enter a password first.'); return; }
+          content = await _decrypt(raw, _syncPassword);
+        }
+        _applyLoadedData(JSON.parse(content));
+        return;
+      } catch(e) { alert('Could not read file: ' + e.message); return; }
+    }
+    _showSyncStatus('File connected (empty — will save here)');
+    _updateSyncUI();
+  } catch(e) {
+    if (e.name !== 'AbortError') console.warn('[Holodeck] File connect error:', e);
+  }
+}
+
+// ─── Gist sync ───────────────────────────────────────────────────
+var _GIST_FILE = 'holodeck-sync.json';
+
+async function _saveToGist() {
+  var s = _getSyncSettings();
+  if (!s.gistPat) return;
+  try {
+    syncProgramStateToStore();
+    var content = JSON.stringify(_buildSyncPayload());
+    if (_syncPassword) content = await _encrypt(content, _syncPassword);
+    var hdrs = {
+      'Authorization': 'token ' + s.gistPat,
+      'Accept': 'application/vnd.github.v3+json',
+      'Content-Type': 'application/json'
+    };
+    var body = { files: {} };
+    body.files[_GIST_FILE] = { content: content };
+    var res;
+    if (s.gistId) {
+      res = await fetch('https://api.github.com/gists/' + s.gistId, {
+        method: 'PATCH', headers: hdrs, body: JSON.stringify(body)
+      });
+    } else {
+      res = await fetch('https://api.github.com/gists', {
+        method: 'POST', headers: hdrs,
+        body: JSON.stringify(Object.assign({ public: false, description: 'Holodeck sync' }, body))
+      });
+      if (res.ok) {
+        var created = await res.json();
+        s.gistId = created.id;
+        _saveSyncSettings(s);
+        _updateSyncUI();
+      }
+    }
+    _showSyncStatus(res.ok ? 'Synced to Gist ✓' : 'Gist error ' + res.status, !res.ok);
+  } catch(e) {
+    console.warn('[Holodeck] Gist save error:', e);
+    _showSyncStatus('Gist sync failed', true);
+  }
+}
+
+async function _checkGistForUpdates() {
+  var s = _getSyncSettings();
+  if (s.mode !== 'gist' || !s.gistPat || !s.gistId) return;
+  try {
+    var res = await fetch('https://api.github.com/gists/' + s.gistId, {
+      headers: { 'Authorization': 'token ' + s.gistPat, 'Accept': 'application/vnd.github.v3+json' }
+    });
+    if (!res.ok) { _showSyncStatus('Gist check failed (' + res.status + ')', true); return; }
+    var gist = await res.json();
+    var fileObj = gist.files && gist.files[_GIST_FILE];
+    if (!fileObj) { _showSyncStatus('Gist has no sync file yet'); return; }
+    var raw = fileObj.content;
+    var peek = null;
+    try { peek = JSON.parse(raw); } catch(e) {}
+    if (peek && peek.enc) {
+      if (!_syncPassword) { _showSyncStatus('Gist is encrypted — enter password to load', true); return; }
+      try { raw = await _decrypt(raw, _syncPassword); } catch(e) { _showSyncStatus('Wrong password', true); return; }
+    }
+    var parsed = JSON.parse(raw);
+    var localRaw = localStorage.getItem(STORAGE_KEY);
+    var localTs  = (localRaw ? (JSON.parse(localRaw).savedAt || '') : '');
+    var gistTs   = parsed.savedAt || '';
+    if (gistTs > localTs) {
+      _pendingGistData = parsed;
+      var banner = document.getElementById('sync-gist-banner');
+      if (banner) banner.style.display = 'flex';
+      var settingsBtn = document.getElementById('settings-btn');
+      if (settingsBtn) settingsBtn.classList.add('sync-notify');
+    } else {
+      _showSyncStatus('Gist in sync ✓');
+    }
+  } catch(e) {
+    console.warn('[Holodeck] Gist check error:', e);
+  }
+}
+
+var _pendingGistData = null;
+
+function applyGistData() {
+  if (!_pendingGistData) return;
+  _applyLoadedData(_pendingGistData);
+}
+
+function dismissGistBanner() {
+  var banner = document.getElementById('sync-gist-banner');
+  if (banner) banner.style.display = 'none';
+  var settingsBtn = document.getElementById('settings-btn');
+  if (settingsBtn) settingsBtn.classList.remove('sync-notify');
+  _pendingGistData = null;
+}
+
+// ─── Apply loaded data (file or gist) ───────────────────────────
+function _applyLoadedData(data) {
+  if (!data || !data.programsStore || !data.treeData) { alert('Invalid sync data.'); return; }
+  var merged = {
+    library: data.library || { environments: [], scenarios: [], traits: [] },
+    programsStore: data.programsStore,
+    treeData: data.treeData,
+    characterTreeData: data.characterTreeData || [],
+    characterLibrary: data.characterLibrary || {},
+    apiEndpoints: (data.apiEndpoints || []).map(function(ep) {
+      var existing = apiEndpoints.find(function(e) { return e.id === ep.id; });
+      return Object.assign({ token: '', maxTokens: 1500 }, ep, { token: existing ? existing.token : '' });
+    }),
+    activeEndpointId: data.activeEndpointId || (apiEndpoints[0] && apiEndpoints[0].id) || '',
+    activeProgramId: data.activeProgramId || null
+  };
+  if (!merged.apiEndpoints.length) merged.apiEndpoints = apiEndpoints;
+  localStorage.setItem(STORAGE_KEY, JSON.stringify(merged));
+  location.reload();
+}
+
+// ─── Status display ──────────────────────────────────────────────
+var _syncStatusTimer = null;
+function _showSyncStatus(msg, isError) {
+  var el = document.getElementById('sync-status');
+  if (!el) return;
+  el.textContent = msg;
+  el.style.color = isError ? '#e06c75' : 'var(--color-text-tertiary)';
+  if (_syncStatusTimer) clearTimeout(_syncStatusTimer);
+  if (!isError) _syncStatusTimer = setTimeout(function() { if (el) el.textContent = ''; }, 4000);
+}
+
+// ─── Settings UI handlers ────────────────────────────────────────
+function _updateSyncUI() {
+  var s = _getSyncSettings();
+  ['local', 'file', 'gist'].forEach(function(m) {
+    var el = document.getElementById('sync-mode-' + m);
+    if (el) el.checked = (s.mode === m);
+  });
+  var fileSection = document.getElementById('sync-file-section');
+  var gistSection = document.getElementById('sync-gist-section');
+  var pwSection   = document.getElementById('sync-pw-section');
+  if (fileSection) fileSection.style.display = s.mode === 'file' ? '' : 'none';
+  if (gistSection) gistSection.style.display = s.mode === 'gist' ? '' : 'none';
+  if (pwSection)   pwSection.style.display   = s.mode !== 'local' ? '' : 'none';
+  var patEl = document.getElementById('sync-gist-pat');
+  if (patEl && !patEl._dirty) patEl.value = s.gistPat || '';
+  var idEl = document.getElementById('sync-gist-id');
+  if (idEl) idEl.textContent = s.gistId ? 'Gist: …' + s.gistId.slice(-6) : '';
+  var fileLabel = document.getElementById('sync-file-label');
+  if (fileLabel) fileLabel.textContent = _fileHandle ? _fileHandle.name : 'No file connected';
+}
+
+function onSyncModeChange(mode) {
+  var s = _getSyncSettings();
+  s.mode = mode;
+  _saveSyncSettings(s);
+  _updateSyncUI();
+}
+
+function onGistPatInput(el) { el._dirty = true; }
+
+function saveGistPat() {
+  var patEl = document.getElementById('sync-gist-pat');
+  if (!patEl) return;
+  var s = _getSyncSettings();
+  s.gistPat = patEl.value.trim();
+  _saveSyncSettings(s);
+  patEl._dirty = false;
+  _showSyncStatus(s.gistPat ? 'PAT saved' : 'PAT cleared');
+  _updateSyncUI();
+  if (s.gistPat && s.gistId) _checkGistForUpdates();
+}
+
+function clearGistLink() {
+  showConfirm('Clear Gist link', 'Unlink from the current Gist? The next save will create a new one.', function() {
+    var s = _getSyncSettings();
+    s.gistId = '';
+    _saveSyncSettings(s);
+    _updateSyncUI();
+    _showSyncStatus('Gist link cleared');
+  });
+}
+
+function onSyncPasswordChange(val) { _syncPassword = val; }
+
+function syncNow() {
+  var s = _getSyncSettings();
+  if (s.mode === 'file') _saveToFile();
+  else if (s.mode === 'gist') _saveToGist();
+  else _showSyncStatus('No sync provider active');
+}
+
+function _initSyncCheck() {
+  _updateSyncUI();
+  var s = _getSyncSettings();
+  if (s.mode === 'gist' && s.gistPat) setTimeout(_checkGistForUpdates, 1500);
+}
+
+// ═══════════════════════════════════════════════════════════════════
 //  PERSISTENCE
 // ═══════════════════════════════════════════════════════════════════
 function syncProgramStateToStore() {
@@ -3738,7 +4042,7 @@ function syncProgramStateToStore() {
   programsStore[activeProgramId].lastUsage          = lastUsage;
 }
 
-function saveToStorage() {
+async function saveToStorage() {
   syncProgramStateToStore();
   try {
     localStorage.setItem(STORAGE_KEY, JSON.stringify({
@@ -3749,11 +4053,15 @@ function saveToStorage() {
       characterLibrary: characterLibrary,
       apiEndpoints: apiEndpoints,
       activeEndpointId: activeEndpointId,
-      activeProgramId: activeProgramId
+      activeProgramId: activeProgramId,
+      savedAt: new Date().toISOString()
     }));
   } catch(e) {
     console.warn('[Holodeck] localStorage save failed:', e);
   }
+  var _s = _getSyncSettings();
+  if      (_s.mode === 'file' && _fileHandle) await _saveToFile();
+  else if (_s.mode === 'gist' && _s.gistPat)  await _saveToGist();
 }
 
 var _saveTimer = null;
@@ -3926,6 +4234,7 @@ _applyMoreButtonsState(localStorage.getItem('extraBtnsOpen') !== '0');
 loadFromStorage();
 backfillTranscriptPresence();
 renderTree();
+_initSyncCheck();
 renderCharacterTree();
 renderParticipants();
 renderArchDirection();

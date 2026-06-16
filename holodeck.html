@@ -167,6 +167,56 @@
       <button onclick="importData()" class="btn-ghost" style="width:100%;padding:6px 12px;font-size:12px;text-align:left;">Import from file</button>
       <button onclick="clearStorage()" class="btn-ghost" style="width:100%;padding:6px 12px;font-size:12px;text-align:left;color:var(--color-text-tertiary);">Reset to defaults</button>
     </div>
+
+    <!-- ─── Storage / Sync settings ──────────────────────────── -->
+    <div style="margin-top:14px;padding-top:12px;border-top:0.5px solid var(--color-border-tertiary);">
+      <span class="setting-label">Storage</span>
+
+      <!-- Gist newer-data banner -->
+      <div id="sync-gist-banner" style="display:none;align-items:center;gap:8px;background:var(--color-background-tertiary);border:0.5px solid var(--color-border-secondary);border-radius:var(--border-radius-md);padding:7px 10px;margin-bottom:10px;">
+        <i class="ti ti-cloud-download" style="font-size:13px;color:var(--active-color);flex-shrink:0;"></i>
+        <span style="font-size:11px;color:var(--color-text-secondary);flex:1;">Newer data in Gist</span>
+        <button onclick="applyGistData()" style="font-size:10px;padding:3px 8px;border-radius:4px;background:var(--active-color);color:#111;border:none;cursor:pointer;">Load</button>
+        <button onclick="dismissGistBanner()" style="font-size:10px;color:var(--color-text-tertiary);background:none;border:none;cursor:pointer;">✕</button>
+      </div>
+
+      <!-- Mode radios -->
+      <div style="display:flex;flex-direction:column;gap:5px;margin-bottom:10px;">
+        <label class="sync-radio-label"><input type="radio" id="sync-mode-local" name="sync-mode" value="local" onchange="onSyncModeChange('local')"> Local only <span style="color:var(--color-text-tertiary);font-size:10px;">(default)</span></label>
+        <label class="sync-radio-label"><input type="radio" id="sync-mode-file"  name="sync-mode" value="file"  onchange="onSyncModeChange('file')"> Local file</label>
+        <label class="sync-radio-label"><input type="radio" id="sync-mode-gist"  name="sync-mode" value="gist"  onchange="onSyncModeChange('gist')"> GitHub Gist</label>
+      </div>
+
+      <!-- File section -->
+      <div id="sync-file-section" style="display:none;margin-bottom:8px;">
+        <div style="font-size:10px;color:var(--color-text-tertiary);margin-bottom:5px;" id="sync-file-label">No file connected</div>
+        <button onclick="connectSyncFile()" class="btn-ghost" style="width:100%;padding:5px 10px;font-size:11px;text-align:left;">Choose file…</button>
+      </div>
+
+      <!-- Gist section -->
+      <div id="sync-gist-section" style="display:none;margin-bottom:8px;">
+        <label class="setting-label" style="margin-top:4px;">GitHub Personal Access Token</label>
+        <input type="password" id="sync-gist-pat" class="setting-input" placeholder="ghp_…" oninput="onGistPatInput(this)" style="margin-bottom:4px;" />
+        <div style="display:flex;gap:6px;margin-bottom:6px;">
+          <button onclick="saveGistPat()" class="btn-ghost" style="flex:1;padding:4px 8px;font-size:11px;">Save PAT</button>
+          <button onclick="clearGistLink()" class="btn-ghost" style="padding:4px 8px;font-size:11px;color:var(--color-text-tertiary);">Unlink Gist</button>
+        </div>
+        <div id="sync-gist-id" style="font-size:10px;color:var(--color-text-tertiary);margin-bottom:4px;"></div>
+        <p style="font-size:10px;color:var(--color-text-tertiary);margin:0 0 4px;">Token needs <code style="font-size:10px;">gist</code> scope. Data on GitHub, private Gist. Tokens never synced.</p>
+      </div>
+
+      <!-- Password (file + gist) -->
+      <div id="sync-pw-section" style="display:none;margin-bottom:8px;">
+        <label class="setting-label">Encryption password <span style="color:var(--color-text-tertiary);font-size:9px;text-transform:none;letter-spacing:0;">(optional — not saved)</span></label>
+        <input type="password" id="sync-password" class="setting-input" placeholder="Leave blank for no encryption" oninput="onSyncPasswordChange(this.value)" />
+      </div>
+
+      <!-- Manual sync + status -->
+      <div style="display:flex;align-items:center;gap:8px;">
+        <button onclick="syncNow()" class="btn-ghost" style="padding:4px 10px;font-size:11px;">Sync now</button>
+        <span id="sync-status" style="font-size:10px;color:var(--color-text-tertiary);"></span>
+      </div>
+    </div>
   </div>
 
   <div style="flex:1;display:flex;overflow:hidden;">

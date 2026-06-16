@@ -19,11 +19,20 @@
 - Adding/editing an endpoint opens a modal with Name, Base URL, Model, API Token (password field), and Max tokens (number, defaults to 1500, used as the `max_tokens` cap on all LLM calls for that endpoint)
 - Test Connection — inside the endpoint modal; fires a real request using the form's current values and reports success/failure below the button
 - Selecting an endpoint from the dropdown makes it active immediately for all LLM calls
-- Settings (gear icon) — Export to file, Import from file, Reset to defaults, and a status line for general API errors
+- Settings (gear icon) — Export to file, Import from file, Reset to defaults, Storage sync options, and a status line for general API errors
 - Export to file — downloads a JSON snapshot of all programs, library, and endpoints (tokens excluded)
 - Import from file — restores from an exported file; preserves existing tokens for endpoints with matching IDs, then reloads
 - Reset to defaults — clears all saved data and reloads with defaults; API endpoints are preserved
 - `?session=name` query parameter — namespaces the localStorage key to `holodeck_v1_name`, giving that URL an independent data store; omitting the parameter uses the default `holodeck_v1` key as before
+
+### Storage / Sync (Settings panel → Storage section)
+
+- **Local only (default)** — data stored exclusively in `localStorage`; no network access; existing behavior unchanged
+- **Local file** — connects a `.json` file via the File System Access API (Chrome/Edge/Safari); on connect, the file is loaded and its data replaces the current state; all subsequent auto-saves write to both localStorage and the chosen file; file handle is session-scoped (reconnect after reload via "Choose file…"); unsupported in Firefox
+- **GitHub Gist** — syncs to a private GitHub Gist using a Personal Access Token (PAT) with `gist` scope; PAT is stored in localStorage; data is written on every auto-save; on page load, the Gist is checked in the background and a banner appears if the Gist contains newer data than localStorage, allowing the user to pull it in; the Gist is created automatically on first save and its ID stored locally; "Unlink Gist" forces creation of a new Gist on next save
+- **Encryption (optional)** — available for both Local file and GitHub Gist modes; user enters a password in the Settings panel; payload is encrypted with AES-256-GCM (PBKDF2 key derivation, 200 000 iterations) before being written; the password is session-only and never persisted; files/Gists written without a password are plain JSON; attempting to load an encrypted file/Gist without a password shows an error
+- **Token security** — API tokens (`apiEndpoints[].token`) are never written to file or Gist sync payloads; on load from file/Gist, tokens from the in-memory local endpoints are merged back so the app continues to work
+- **Sync now** button — manually triggers a save to the active sync provider outside the 500 ms auto-save debounce
 
 ---
 
