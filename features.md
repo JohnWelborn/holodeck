@@ -130,6 +130,12 @@ Modes:
   - Full paragraph
   - Full response — aims to fill the screen
 
+Keyboard shortcuts — global hotkeys active from anywhere outside modals and non-main text fields:
+- Alt+Enter — trigger AI reply (respects Auto mode: AI Choice picks next speaker; Everyone Gets Turn starts a full round)
+- Alt+R — regenerate the last message
+- Alt+P — cycle active persona to the next participant
+- Alt+C — toggle Choose Your Own Adventure mode on/off
+
 Suggestions — clickable buttons that send the option as a message; arrow-key navigable
 
 ---

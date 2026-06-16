@@ -1683,7 +1683,7 @@ function createMsgRow(participantId, text, isUserMsg) {
     nameRow.appendChild(ind);
   }
 
-  var ma = buildMsgActions('Generate new message');
+  var ma = buildMsgActions('Generate new message (Alt+R)');
   nameRow.appendChild(ma.actions);
   content.appendChild(nameRow);
 
@@ -2757,7 +2757,7 @@ function createDescriptionMsgRow(text) {
   nspan.style.cssText = 'font-size:11px;color:var(--color-text-secondary);font-style:italic;';
   nameRow.appendChild(nspan);
 
-  var ma = buildMsgActions('Re-describe');
+  var ma = buildMsgActions('Re-describe (Alt+R)');
   nameRow.appendChild(ma.actions);
   content.appendChild(nameRow);
 
@@ -2915,6 +2915,33 @@ msgInput.addEventListener('input', function(){
   this.style.height = Math.min(this.scrollHeight, 120) + 'px';
 });
 
+document.addEventListener('keydown', function(e) {
+  if (!e.altKey) return;
+  var focused = document.activeElement;
+  var isOtherInput = focused && focused !== msgInput &&
+    (focused.tagName === 'TEXTAREA' || focused.tagName === 'INPUT');
+  if (isOtherInput) return;
+  var modal = document.getElementById('modal-box');
+  if (modal && modal.style.display !== 'none' && modal.style.display !== '') return;
+
+  if (e.key === 'Enter') {
+    e.preventDefault();
+    if (isGenerating || isSuggesting) return;
+    if (autoMode === 'everyone') initEveryoneRound();
+    else triggerAiChoice();
+  } else if (e.key === 'r' || e.key === 'R') {
+    e.preventDefault();
+    if (isGenerating || isSuggesting) return;
+    var regenBtns = document.querySelectorAll('#messages-container .regen-btn');
+    if (regenBtns.length > 0) regenBtns[regenBtns.length - 1].click();
+  } else if (e.key === 'p' || e.key === 'P') {
+    e.preventDefault();
+    cyclePersona();
+  } else if (e.key === 'c' || e.key === 'C') {
+    e.preventDefault();
+    toggleCYOAMode();
+  }
+});
 
 var activeProgramId = 'p7';
 var draggedId = null;
