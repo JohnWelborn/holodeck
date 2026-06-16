@@ -10,8 +10,10 @@ function escHtml(str) {
     .replace(/>/g,'&gt;').replace(/"/g,'&quot;');
 }
 function renderDialogue(text) {
-  return escHtml(text).replace(/&quot;([\s\S]*?)&quot;/g,
-    '<span class="dialogue">&quot;$1&quot;</span>');
+  return escHtml(text)
+    .replace(/\*\*([\s\S]*?)\*\*/g, '<strong>$1</strong>')
+    .replace(/\*([\s\S]*?)\*/g, '<span class="action">$1</span>')
+    .replace(/&quot;([\s\S]*?)&quot;/g, '<span class="dialogue">&quot;$1&quot;</span>');
 }
 function generateInitials(name) {
   var parts = (name || '').trim().split(/\s+/);
