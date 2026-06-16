@@ -93,9 +93,9 @@ var programState = {
     { speakerName:'Stew',     participantId:'ST', text:'Stew picked up a can of beans and shook it. "I vote together. She found food."' }
   ],
 
-  systemPromptBase: 'You are the author of an ongoing collaborative fiction.\nYou are currently writing the role of {name}.\nWrite only {name}\'s contributions to the scene — their actions, dialogue, and reactions.\nNever write for any other character.',
+  systemPromptBase: 'You are the author of an ongoing collaborative fiction.\nYou are currently writing the role of {name}.\nWrite only {name}\'s contributions to the scene — their actions, dialogue, and reactions.\nNever write for any other character.\nIf mutual agreement on an action has already been reached in the transcript, carry it out — do not re-confirm or restate the agreement.',
 
-  closingInstruction: "Write {name}'s next response. Narrative prose — action and dialogue. Stop when their contribution is complete.",
+  closingInstruction: "Write {name}'s next response. Narrative prose — action and dialogue. If an action was proposed and agreed upon in the preceding exchange, perform it. Stop when their contribution is complete.",
 
   contentPolicy: 'Content policy: This is a PG-13 story. Keep all content appropriate for a general teenage audience. Avoid explicit sexual content, graphic violence or gore, and strong profanity. Romantic and action content is fine but must remain tasteful and non-graphic. Conflict and tension are allowed; gratuitous or exploitative depictions are not. If the conversation has already violated this policy, decline to continue and say so.'
 };

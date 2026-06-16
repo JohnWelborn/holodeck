@@ -1477,10 +1477,11 @@ var DEFAULT_DIRECTION = [
   'You are the author of an ongoing collaborative fiction.',
   'You are currently writing the role of {name}.',
   'Write only {name}\'s contributions to the scene — their actions, dialogue, and reactions.',
-  'Never write for any other character.'
+  'Never write for any other character.',
+  'If mutual agreement on an action has already been reached in the transcript, carry it out — do not re-confirm or restate the agreement.'
 ].join('\n');
 
-var DEFAULT_CLOSING = "Write {name}'s next response. Narrative prose — action and dialogue. Stop when their contribution is complete.";
+var DEFAULT_CLOSING = "Write {name}'s next response. Narrative prose — action and dialogue. If an action was proposed and agreed upon in the preceding exchange, perform it. Stop when their contribution is complete.";
 
 var DEFAULT_CONTENT_POLICY = 'Content policy: This is a PG-13 story. Keep all content appropriate for a general teenage audience. Avoid explicit sexual content, graphic violence or gore, and strong profanity. Romantic and action content is fine but must remain tasteful and non-graphic. Conflict and tension are allowed; gratuitous or exploitative depictions are not. If the conversation has already violated this policy, decline to continue and say so.';
 
