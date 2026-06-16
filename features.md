@@ -48,7 +48,7 @@ The left panel is split into two independently collapsible sections: Programs an
 
 ### Characters Section
 
-UI for organizing reusable, program-independent characters into folders, backed by `characterLibrary`. Ships with 16 ready-made characters harvested from the default programs (Dr. Vasquez, Cmdr. Reyes, Kira, Lt. Torres, Prof. Aldric, Captain Osei, Ambassador Sael, Maren, Povik, Karathos, Syrath, Priya, Rahul, John, Stew, Cleverly), each with full personality/speech/knowledge/traits data.
+UI for organizing reusable, program-independent characters into folders, backed by `characterLibrary`. Ships with 16 ready-made characters harvested from the default programs (Dr. Vasquez, Cmdr. Reyes, Kira, Lt. Torres, Prof. Aldric, Captain Osei, Ambassador Sael, Maren, Povik, Karathos, Syrath, Priya, Rahul, John, Stew, Cleverly), each with full personality/speech/knowledge/traits data. Also includes **The Narrator** — a special non-character persona (id: `narrator`) that produces omniscient third-person prose narration when triggered, rather than in-character dialogue. Intended for tabletop/GM-style scene-setting and plot events. Not pre-loaded into any programs; added to a program manually like any other library character.
 
 - New Character — creates a character entry (default fields, next unused avatar color) and enters inline rename mode
 - New Folder — creates a folder and enters inline rename mode
