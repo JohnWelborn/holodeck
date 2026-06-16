@@ -102,6 +102,12 @@ Message row actions (appear on hover):
 - Regenerate — re-calls the LLM with only the transcript up to this message; streams a new variant into the bubble
 - Prev / Next generation — navigate between variants; arrows dim at boundaries; counter (e.g. 2/3) hidden until 2+ generations exist
 
+Message text rendering — applied via `renderDialogue()` to all message bubbles, inline edits, CYOA suggestions, and scene descriptions:
+- `"quoted text"` → warm-gold italic (`.dialogue`, `--color-dialogue: #c8a86e`)
+- `*action text*` → soft blue-gray italic (`.action`, `--color-action: #a0a0c0`); asterisks removed
+- `**bold text**` → bold weight (`<strong>`); asterisks removed
+- HTML is escaped before any span injection, preventing XSS
+
 Input:
 - Persona chip — shows active speaker; click cycles to next participant; when the active program has no participants (or no persona selected), the chip clears and the input placeholder resets to "Type a message..."
 - Textarea — auto-height; Enter sends, Shift+Enter newline, ArrowUp navigates suggestions

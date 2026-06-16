@@ -16,6 +16,7 @@
       --active-color: #56c99a;
       --active-border: #1D9E75;
       --color-dialogue: #c8a86e;
+      --color-action: #a0a0c0;
     }
     html, body { height: 100%; background: var(--color-background-tertiary); color: var(--color-text-primary); font-family: var(--font-sans); }
     body { display: flex; align-items: stretch; justify-content: center; padding: 20px; }
@@ -376,6 +377,7 @@
 
     /* ── Dialogue colouring ── */
     .dialogue { color: var(--color-dialogue); font-style: italic; }
+    .action { color: var(--color-action); font-style: italic; }
 
     /* ── Empty state ── */
     .empty-state {
