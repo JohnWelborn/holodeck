@@ -251,14 +251,17 @@
         </div>
       </div>
 
-      <!-- Character editor view (shown in place of the scene when a character is selected) -->
+      <!-- Character / participant editor view (shown in place of the scene) -->
       <div id="character-editor-view" style="display:none;flex:1;min-width:0;flex-direction:column;overflow:hidden;">
-        <div style="padding:10px 14px;border-bottom:0.5px solid var(--color-border-tertiary);flex-shrink:0;">
-          <span id="character-editor-title" style="font-size:13px;font-weight:500;"></span>
+        <div style="padding:10px 14px;border-bottom:0.5px solid var(--color-border-tertiary);flex-shrink:0;display:flex;align-items:center;gap:8px;">
+          <div style="flex:1;min-width:0;">
+            <div id="editor-type-label" style="font-size:10px;font-weight:500;color:var(--color-text-secondary);letter-spacing:0.5px;text-transform:uppercase;line-height:1.2;"></div>
+            <span id="character-editor-title" style="font-size:13px;font-weight:500;"></span>
+          </div>
         </div>
         <div id="character-editor-form" style="flex:1;overflow-y:auto;padding:14px;"></div>
         <div style="border-top:0.5px solid var(--color-border-tertiary);padding:10px 14px;display:flex;justify-content:flex-end;gap:8px;flex-shrink:0;">
-          <button class="btn-primary" onclick="saveCharacterEdit()">Save</button>
+          <button class="btn-primary" onclick="saveCurrentEditor()">Save</button>
         </div>
       </div>
     </div>

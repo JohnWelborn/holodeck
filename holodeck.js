@@ -851,20 +851,37 @@ function removeCharacterPerspective(charId, otherId) {
 
 function openCharacterEditor(charId) {
   activeCharacterId = charId;
+  activeEditorMode = 'character';
+  activeParticipantId = null;
   var prefill = characterLibrary[charId];
   document.getElementById('scene-view').style.display = 'none';
   document.getElementById('character-editor-view').style.display = 'flex';
+  document.getElementById('editor-type-label').textContent = 'Character';
   document.getElementById('character-editor-title').textContent = prefill ? prefill.displayName : '';
   renderCharacterEditForm(document.getElementById('character-editor-form'), charId);
   renderCharacterTree();
 }
 
 function closeCharacterEditor() {
-  if (!activeCharacterId) return;
+  if (!activeCharacterId && !activeParticipantId) return;
   activeCharacterId = null;
+  activeEditorMode = null;
+  activeParticipantId = null;
   document.getElementById('character-editor-view').style.display = 'none';
   document.getElementById('scene-view').style.display = 'flex';
   renderCharacterTree();
+}
+
+function openParticipantEditor(participantId) {
+  activeParticipantId = participantId;
+  activeEditorMode = 'participant';
+  activeCharacterId = null;
+  var p = programState.participants[participantId];
+  document.getElementById('scene-view').style.display = 'none';
+  document.getElementById('character-editor-view').style.display = 'flex';
+  document.getElementById('editor-type-label').textContent = 'Participant';
+  document.getElementById('character-editor-title').textContent = p ? p.displayName : '';
+  renderParticipantEditorForm(document.getElementById('character-editor-form'), participantId);
 }
 
 function saveCharacterEdit() {
@@ -904,6 +921,84 @@ function saveCharacterEdit() {
   document.getElementById('character-editor-title').textContent = displayName;
   renderCharacterTree();
   scheduleSave();
+}
+
+function renderParticipantEditorForm(container, participantId) {
+  var prefill = programState.participants[participantId];
+  var otherIds = Object.keys(programState.participants).filter(function(id){ return id !== participantId; });
+  var palHtml = buildAvatarPaletteHtml(prefill, Object.values(programState.participants));
+
+  var perspHtml = '';
+  if (otherIds.length > 0) {
+    perspHtml = '<div class="form-group"><label class="form-label">Perspectives on Other Participants</label><p class="form-hint">How does this character view each other participant? Written from their own point of view — what they think, trust, remember.</p>';
+    otherIds.forEach(function(oid) {
+      var op = programState.participants[oid];
+      var defaultPersp = (prefill && prefill.defaultPerspectives && op.libraryId) ? prefill.defaultPerspectives[op.libraryId] : '';
+      var placeholder = defaultPersp || ('What this character thinks of ' + op.displayName + ', their history, how much they trust them…');
+      perspHtml += '<div class="perspective-item">';
+      perspHtml += '<div class="perspective-name"><div class="av" style="display:inline-flex;width:16px;height:16px;background:' + op.bg + ';"><span style="font-size:8px;font-weight:500;color:' + op.color + ';">' + escHtml(op.initials) + '</span></div>&nbsp;' + escHtml(op.displayName) + '</div>';
+      perspHtml += '<textarea class="form-input form-textarea" data-perspective-for="' + escHtml(oid) + '" style="min-height:60px;" placeholder="' + escHtml(placeholder) + '"></textarea>';
+      perspHtml += '</div>';
+    });
+    perspHtml += '</div>';
+  }
+
+  container.innerHTML = buildCharacterFieldsHtml(palHtml) + perspHtml;
+
+  if (prefill) {
+    container.querySelector('#f-display-name').value          = prefill.displayName        || '';
+    container.querySelector('#f-full-name').value             = prefill.fullName            || '';
+    container.querySelector('#f-role').value                  = prefill.role                || '';
+    container.querySelector('#f-photo').value                 = prefill.photo               || '';
+    container.querySelector('#f-personality').value           = prefill.personality         || '';
+    container.querySelector('#f-speech').value                = prefill.speech              || '';
+    container.querySelector('#f-knowledge').value             = prefill.knowledge           || '';
+    container.querySelector('#f-private-personality').value   = prefill.privatePersonality  || '';
+    if (prefill.perspectives) {
+      container.querySelectorAll('[data-perspective-for]').forEach(function(ta) {
+        ta.value = prefill.perspectives[ta.dataset.perspectiveFor] || '';
+      });
+    }
+  }
+}
+
+function saveParticipantEdit() {
+  var form = document.getElementById('character-editor-form');
+  var displayName        = (form.querySelector('#f-display-name').value        || '').trim();
+  var fullName           = (form.querySelector('#f-full-name').value           || '').trim() || displayName;
+  var role               = (form.querySelector('#f-role').value                || '').trim();
+  var photo              = (form.querySelector('#f-photo').value               || '').trim() || null;
+  var personality        = (form.querySelector('#f-personality').value         || '').trim();
+  var speech             = (form.querySelector('#f-speech').value              || '').trim();
+  var knowledge          = (form.querySelector('#f-knowledge').value           || '').trim();
+  var privatePersonality = (form.querySelector('#f-private-personality').value || '').trim();
+
+  if (!displayName) { highlightRequiredIn(form, 'f-display-name'); return; }
+  if (!role)        { highlightRequiredIn(form, 'f-role'); return; }
+
+  var perspectives = {};
+  form.querySelectorAll('[data-perspective-for]').forEach(function(ta) {
+    var val = ta.value.trim();
+    if (val) perspectives[ta.dataset.perspectiveFor] = val;
+  });
+
+  var pal = avatarPalette[selectedPaletteIndex];
+  var p = programState.participants[activeParticipantId];
+  if (p) {
+    p.displayName = displayName; p.fullName = fullName; p.role = role;
+    p.photo = photo; p.personality = personality; p.speech = speech;
+    p.knowledge = knowledge; p.privatePersonality = privatePersonality; p.perspectives = perspectives;
+    p.bg = pal.bg; p.color = pal.color; p.initials = generateInitials(displayName);
+  }
+
+  document.getElementById('character-editor-title').textContent = displayName;
+  renderParticipants();
+  scheduleSave();
+}
+
+function saveCurrentEditor() {
+  if (activeEditorMode === 'participant') saveParticipantEdit();
+  else saveCharacterEdit();
 }
 
 function addCharacterToProgram(charId) {
@@ -2224,7 +2319,7 @@ function renderParticipants() {
     editBtn.title = 'Edit ' + p.displayName;
     editBtn.style.cssText = 'color:var(--color-text-secondary);padding:2px;flex-shrink:0;display:flex;align-items:center;';
     editBtn.innerHTML = '<i class="ti ti-pencil" style="font-size:12px;"></i>';
-    editBtn.onclick = (function(k){ return function(){ openModal('participant', k); }; })(id);
+    editBtn.onclick = (function(k){ return function(){ openParticipantEditor(k); }; })(id);
     row.appendChild(editBtn);
 
     // Speak-as
@@ -2315,6 +2410,7 @@ function deleteParticipant(id) {
     var remaining = Object.keys(programState.participants).filter(function(k){ return k !== id; });
     if (remaining.length > 0) switchPersona(remaining[0]);
   }
+  if (activeParticipantId === id) closeCharacterEditor();
   delete programState.participants[id];
   delete presence[id];
   renderParticipants();
@@ -2947,6 +3043,8 @@ var activeProgramId = 'p7';
 var draggedId = null;
 var draggedCharId = null;
 var activeCharacterId = null;
+var activeEditorMode = null; // 'character' | 'participant'
+var activeParticipantId = null;
 
 // ─── Switch program ────────────────────────────────────────────────
 function switchProgram(id) {
